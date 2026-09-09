@@ -1,106 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rental Car Manager v0.3.0</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horizon Rental Manager v0.4.0</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
-  <header class="topbar">
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">↗</div>
+      <div>
+        <div class="brand-name">HORIZON</div>
+        <div class="brand-sub">RENTAL CAR MANAGER</div>
+      </div>
+    </div>
+    <nav class="main-nav">
+      <button class="nav-btn" data-screen="dashboard">⌂<span>Dashboard</span></button>
+      <button class="nav-btn active" data-screen="counter">●<span>Counter</span></button>
+      <button class="nav-btn" data-screen="reservations">▦<span>Reservations</span></button>
+      <button class="nav-btn" data-screen="fleet">▰<span>Fleet</span></button>
+      <button class="nav-btn" data-screen="employees">♟<span>Employees</span></button>
+      <button class="nav-btn" data-screen="maintenance">⚒<span>Maintenance</span></button>
+      <button class="nav-btn" data-screen="reports">▤<span>Reports</span></button>
+      <button class="nav-btn" data-screen="corporate">▥<span>Corporate</span></button>
+    </nav>
+    <div class="header-info">
+      <div class="branch-head">
+        <strong>Warsaw Branch</strong>
+        <span id="topDate">Tue, Sep 8, 2026</span>
+      </div>
+      <div class="weather">☀️ <span id="weatherText">72°F Clear</span></div>
+      <div class="manager"><div class="avatar">JB</div><div><strong>Joe Blazek</strong><span>Branch Manager</span></div></div>
+    </div>
+  </header>
+
+  <section class="timebar">
     <div>
-      <h1>Rental Car Manager <span class="version">v0.3.0</span></h1>
-      <div class="subtitle">Warsaw Branch • Joe Blazek, Branch Manager</div>
+      <div class="clock-label">Branch Time</div>
+      <div id="topTime" class="top-time">9:14 AM</div>
     </div>
-    <div class="clockbox">
-      <div id="gameDate"></div>
-      <div id="gameTime"></div>
-      <div id="weatherLine"></div>
-    </div>
-    <div class="header-actions">
-      <button id="pauseBtn">▶ Start Day</button>
-      <button id="advanceBtn">+15 Min</button>
+    <div class="time-actions">
+      <button id="playBtn" class="primary">▶ Run</button>
+      <button id="advance15Btn">+15 Min</button>
       <button id="nextDayBtn">Next Day</button>
       <button id="saveBtn">Save</button>
       <button id="loadBtn">Load</button>
     </div>
-  </header>
-
-  <nav class="tabs">
-    <button class="tab active" data-view="branch">Branch</button>
-    <button class="tab" data-view="customers">Customers</button>
-    <button class="tab" data-view="reservations">Reservations</button>
-    <button class="tab" data-view="fleet">Fleet</button>
-    <button class="tab" data-view="returns">Returns & Damage</button>
-    <button class="tab" data-view="employees">Employees</button>
-    <button class="tab" data-view="schedule">Schedule</button>
-    <button class="tab" data-view="transfers">Transfers</button>
-    <button class="tab" data-view="market">Fleet Market</button>
-    <button class="tab" data-view="contracts">Rental Contracts</button>
-    <button class="tab" data-view="reviews">Reviews</button>
-    <button class="tab" data-view="corporate">Corporate</button>
-    <button class="tab" data-view="financials">Financials</button>
-    <button class="tab" data-view="office">Manager Office</button>
-  </nav>
+    <div class="version">v0.4.0</div>
+  </section>
 
   <main>
-    <section id="branch" class="view active">
-      <div class="metrics" id="metrics"></div>
-      <div class="branch-grid">
-        <div class="panel lot-panel">
-          <div class="panel-title"><h2>Branch Parking Lot</h2><span id="lotSummary"></span></div>
-          <div class="lot-zones">
-            <div><h3>Ready Row</h3><div id="readyLot" class="parking-lot"></div></div>
-            <div><h3>Return / Cleaning Row</h3><div id="returnLot" class="parking-lot"></div></div>
-            <div><h3>Hold / Maintenance</h3><div id="holdLot" class="parking-lot"></div></div>
+    <section id="screen-counter" class="screen active">
+      <div class="counter-grid">
+        <aside class="queue-panel panel">
+          <div class="panel-header">
+            <h2>👥 Customer Queue <span id="queueCount"></span></h2>
+            <span>Est. Wait <b id="estWait">0 min</b></span>
+          </div>
+          <div id="customerQueue" class="queue-list"></div>
+          <div class="arrivals-box">
+            <div class="section-head">Arrivals / Next Hour</div>
+            <div id="arrivalsList"></div>
+          </div>
+        </aside>
+
+        <section class="customer-scene panel">
+          <div class="scene-backdrop">
+            <div class="desk-logo">HORIZON <small>RENTAL CAR</small></div>
+            <div class="customer-figure">
+              <div id="customerAvatar" class="large-avatar">JC</div>
+              <div id="speechBubble" class="speech">Hi, I have a reservation.</div>
+            </div>
+            <div class="counter-desk">
+              <div class="monitor"></div>
+              <div class="desk-front">HORIZON</div>
+            </div>
+          </div>
+          <div id="conversationButtons" class="conversation-actions"></div>
+        </section>
+
+        <section class="rental-panel panel">
+          <div class="panel-header"><h2>Customer / Rental Information</h2><button id="editCustomerBtn">Edit</button></div>
+          <div id="rentalInfo"></div>
+          <div class="products">
+            <div class="section-head">Optional Products</div>
+            <label><input type="checkbox" id="productDamage"> Damage Waiver (LDW) <span>$24.99/day</span></label>
+            <label><input type="checkbox" id="productLiability"> Supplemental Liability <span>$14.99/day</span></label>
+            <label><input type="checkbox" id="productRoadside"> Roadside Assistance <span>$6.99/day</span></label>
+            <label><input type="checkbox" id="productFuel"> Prepaid Fuel <span>$64.99</span></label>
+            <label><input type="checkbox" id="productDriver"> Additional Driver <span>$7.00/day</span></label>
+            <label><input type="checkbox" id="productSeat"> Child Seat <span>$13.00/day</span></label>
+          </div>
+        </section>
+
+        <section class="assign-panel panel">
+          <div class="panel-header"><h2>🚘 Assign Vehicle</h2></div>
+          <div class="assign-tabs">
+            <button class="mini-tab active" data-filter="available">Available <span id="availableCount"></span></button>
+            <button class="mini-tab" data-filter="upgrades">Upgrades</button>
+            <button class="mini-tab" data-filter="all">All Vehicles</button>
+          </div>
+          <div id="assignVehicles" class="assign-list"></div>
+          <button id="viewInventoryBtn" class="wide">View Full Inventory</button>
+        </section>
+      </div>
+
+      <div class="facility-tabs">
+        <button class="facility-tab active" data-zone="branch">Branch View</button>
+        <button class="facility-tab" data-zone="ready">Parking Lot</button>
+        <button class="facility-tab" data-zone="cleaning">Cleaning Bay</button>
+        <button class="facility-tab" data-zone="fueling">Fueling</button>
+        <button class="facility-tab" data-zone="maintenance">Maintenance</button>
+        <button class="facility-tab" data-zone="office">Manager Office</button>
+      </div>
+
+      <section class="facility panel">
+        <div class="facility-map">
+          <div class="zone ready-zone">
+            <div class="zone-title">Ready Row <span id="readyCount"></span></div>
+            <div id="readyRow" class="lot-grid"></div>
+          </div>
+          <div class="zone return-zone">
+            <div class="zone-title">Return Lane <span id="returnCount"></span></div>
+            <div id="returnLane" class="vertical-lot"></div>
+          </div>
+          <div class="zone cleaning-zone">
+            <div class="zone-title">Cleaning Bay <span id="cleanCount"></span></div>
+            <div id="cleaningBays" class="cleaning-bays"></div>
+            <div id="cleaningQueue" class="cleaning-queue"></div>
+          </div>
+          <div class="zone fuel-zone">
+            <div class="zone-title">Fueling <span id="fuelCount"></span></div>
+            <div id="fuelZone" class="vertical-lot"></div>
+          </div>
+          <div class="zone maintenance-zone">
+            <div class="zone-title">Maintenance <span id="maintCount"></span></div>
+            <div id="maintenanceZone" class="vertical-lot"></div>
+          </div>
+          <div class="zone office-zone">
+            <div class="zone-title">Manager Office</div>
+            <div class="office-building">
+              <button id="officePhone">📞 Phone</button>
+              <button id="officeInbox">📧 Inbox</button>
+              <button id="officeStaff">👥 Staff</button>
+              <button id="officeReports">📊 Reports</button>
+            </div>
           </div>
         </div>
-        <div class="panel">
-          <div class="panel-title"><h2>Live Operations</h2><span>Branch events</span></div>
-          <div id="eventFeed" class="event-feed"></div>
-        </div>
-      </div>
-      <div class="bottom-grid">
-        <div class="panel"><div class="panel-title"><h2>Customers Waiting</h2></div><div id="customerQueue"></div></div>
-        <div class="panel"><div class="panel-title"><h2>Today's Work</h2></div><div id="workQueue"></div></div>
-      </div>
+      </section>
+
+      <section class="bottom-kpis">
+        <div class="kpi-block"><span>Cars on Lot</span><b id="carsOnLot">0</b><small id="lotBreakdown"></small></div>
+        <div class="kpi-block"><span>Today's Rentals</span><b id="todaysRentals">0</b><small id="rentalsBreakdown"></small></div>
+        <div class="kpi-block"><span>Returns Today</span><b id="returnsToday">0</b><small id="returnsBreakdown"></small></div>
+        <div class="kpi-block"><span>Fleet Utilization</span><b id="utilKpi">0%</b><div class="progress"><i id="utilBar"></i></div><small>Target 78%</small></div>
+        <div class="kpi-block"><span>Customer Satisfaction</span><b id="satKpi">0%</b><div class="progress"><i id="satBar"></i></div><small>Target 90%</small></div>
+        <div class="kpi-block"><span>Daily Revenue</span><b id="revenueKpi">$0</b><small id="laborKpi">Labor $0</small></div>
+        <div class="kpi-block status-kpi"><span>Branch Status</span><b id="branchStatus">● Running Smoothly</b><small id="branchMessage">Keep up the good work!</small></div>
+      </section>
     </section>
 
-    <section id="customers" class="view">
-      <div class="panel">
-        <div class="panel-title"><h2>Customer Counter</h2><button id="serveNextBtn">Serve Next Customer</button></div>
-        <div id="customerCounter"></div>
-      </div>
-    </section>
-
-    <section id="reservations" class="view"><div class="panel"><div class="panel-title"><h2>Reservation Board</h2><button id="newReservationBtn">+ Walk-In</button></div><div id="reservationTable"></div></div></section>
-    <section id="fleet" class="view"><div class="panel"><div class="panel-title"><h2>Fleet Management</h2></div><div id="fleetTable"></div></div></section>
-    <section id="returns" class="view"><div class="panel"><div class="panel-title"><h2>Returns & Damage Inspection</h2></div><div id="returnsList"></div></div></section>
-    <section id="employees" class="view"><div class="panel"><div class="panel-title"><h2>Employees</h2></div><div id="employeeCards" class="cards"></div></div></section>
-    <section id="schedule" class="view"><div class="panel"><div class="panel-title"><h2>Weekly Schedule</h2></div><div id="scheduleTable"></div></div></section>
-    <section id="transfers" class="view"><div class="panel"><div class="panel-title"><h2>Branch Transfers</h2></div><div id="transferPanel"></div></div></section>
-    <section id="market" class="view"><div class="panel"><div class="panel-title"><h2>Fleet Market</h2></div><div id="marketPanel"></div></div></section>
-    <section id="contracts" class="view"><div class="panel"><div class="panel-title"><h2>Rental Contracts</h2></div><div id="contractsPanel"></div></div></section>
-<section id="reviews" class="view"><div class="panel"><div class="panel-title"><h2>Customer Reviews</h2></div><div id="reviewsPanel"></div></div></section>
-<section id="corporate" class="view"><div class="panel"><div class="panel-title"><h2>Corporate & Career</h2></div><div id="corporatePanel"></div></div></section>
-    <section id="financials" class="view"><div class="metrics" id="financialMetrics"></div><div class="panel"><div class="panel-title"><h2>Daily Financial Activity</h2></div><div id="ledger"></div></div></section>
-    <section id="office" class="view">
-      <div class="office-grid">
-        <div class="panel"><div class="panel-title"><h2>Manager Computer</h2></div>
-          <div class="office-icons">
-            <button data-office="emails">📧 Email</button><button data-office="reports">📊 Reports</button>
-            <button data-office="cases">🧾 Customer Cases</button><button data-office="maintenance">🔧 Maintenance</button>
-            <button data-office="phone">📱 Manager Phone</button><button data-office="reputation">⭐ Reputation</button>
-          </div>
-        </div>
-        <div class="panel"><div class="panel-title"><h2>Manager Inbox</h2></div><div id="managerInbox"></div></div>
-      </div>
-    </section>
+    <section id="screen-dashboard" class="screen"><div class="simple-screen" id="dashboardContent"></div></section>
+    <section id="screen-reservations" class="screen"><div class="simple-screen" id="reservationContent"></div></section>
+    <section id="screen-fleet" class="screen"><div class="simple-screen" id="fleetContent"></div></section>
+    <section id="screen-employees" class="screen"><div class="simple-screen" id="employeeContent"></div></section>
+    <section id="screen-maintenance" class="screen"><div class="simple-screen" id="maintenanceContent"></div></section>
+    <section id="screen-reports" class="screen"><div class="simple-screen" id="reportsContent"></div></section>
+    <section id="screen-corporate" class="screen"><div class="simple-screen" id="corporateContent"></div></section>
   </main>
 </div>
 
-<dialog id="modal"><div id="modalContent"></div><form method="dialog"><button>Close</button></form></dialog>
+<dialog id="modal"><div id="modalBody"></div><form method="dialog"><button>Close</button></form></dialog>
 <script src="app.js"></script>
 </body>
 </html>

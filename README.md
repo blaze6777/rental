@@ -1,35 +1,31 @@
-# Rental Car Manager v0.3.0
+# Horizon Rental Manager v0.4.0
 
-A GitHub Pages-ready rental car branch management simulator designed to feel like running a large national rental-car branch.
+This version redesigns the actual game around a national rental-car branch workflow.
 
-## New in v0.3.0
-- Full rental agreements with agreement numbers
-- Exact vehicle/unit tied to every contract
-- Mileage out/in and fuel out/in
-- Protection product, roadside, fuel plan, upgrade, and one-way rental tracking
-- Branch attachment-rate KPIs
-- Customer reviews generated from actual gameplay outcomes
-- Average customer wait tracking
-- Employee sales/service scores and contract counts
-- Branch performance scorecard with utilization, satisfaction, protection attach, and ready-rate targets
-- One-way rentals to other branches
-- Vehicle condition walk-around actions
-- Condition/damage items remain permanently attached to each vehicle's history
-- Damage claims and repairs continue to stay with the exact unit
-- More national-rental-company-style operational pressure and metrics
-
-## Core systems retained
-- Persistent individual fleet
-- VIN, plate, mileage, fuel, maintenance, revenue, value
-- Returns, cleaning, maintenance, roadside, damage holds
-- Employees, morale, attendance, scheduling, tasks
-- Fleet market and transfers
-- Corporate career progression
-- Daily financials
-- Local save/load
+## Major v0.4.0 changes
+- Main gameplay screen now resembles a real rental branch operating dashboard.
+- Customer queue on the left with wait time and next-hour arrivals.
+- Selected customer physically appears at the desk with changing dialogue.
+- Central rental computer shows contact info, loyalty, reservation, dates, class, rate, type, and status.
+- Optional rental products are selectable from the counter screen.
+- Exact ready vehicle can be assigned directly to today's rental.
+- Full vehicle-assignment list shows unit, model, class, mileage, fuel, and cleanliness.
+- Ready Row, Return Lane, Cleaning Bay, Fueling, Maintenance, and Manager Office are visible simultaneously.
+- Six numbered cleaning bays have live countdown timers.
+- Dirty cars wait in a cleaning queue until a bay is available.
+- Finished cleaning sends the vehicle to Fueling or Ready automatically.
+- Fueling sends completed cars back to Ready.
+- Returned rentals enter Return Lane and move through inspection/cleaning.
+- Live bottom KPIs for cars on lot, rentals, returns, utilization, satisfaction, revenue, labor, and branch status.
+- Dashboard, Reservations, Fleet, Employees, Maintenance, Reports, and Corporate screens remain available.
+- Save/load retained.
+- Space = Run/Pause; D = advance 15 minutes.
 
 ## GitHub Pages
-Upload `index.html`, `style.css`, and `app.js` to the repository root and enable Pages from the `main` branch / root.
+Replace the existing files in your `rental` repository with:
+- index.html
+- style.css
+- app.js
+- README.md
 
-## Save note
-v0.3.0 uses a new browser save key because contracts and branch performance data were added.
+Then commit the changes. GitHub Pages will update automatically.
