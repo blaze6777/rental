@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rental Car Manager v0.3.0</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div>
+      <h1>Rental Car Manager <span class="version">v0.3.0</span></h1>
+      <div class="subtitle">Warsaw Branch • Joe Blazek, Branch Manager</div>
+    </div>
+    <div class="clockbox">
+      <div id="gameDate"></div>
+      <div id="gameTime"></div>
+      <div id="weatherLine"></div>
+    </div>
+    <div class="header-actions">
+      <button id="pauseBtn">▶ Start Day</button>
+      <button id="advanceBtn">+15 Min</button>
+      <button id="nextDayBtn">Next Day</button>
+      <button id="saveBtn">Save</button>
+      <button id="loadBtn">Load</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="branch">Branch</button>
+    <button class="tab" data-view="customers">Customers</button>
+    <button class="tab" data-view="reservations">Reservations</button>
+    <button class="tab" data-view="fleet">Fleet</button>
+    <button class="tab" data-view="returns">Returns & Damage</button>
+    <button class="tab" data-view="employees">Employees</button>
+    <button class="tab" data-view="schedule">Schedule</button>
+    <button class="tab" data-view="transfers">Transfers</button>
+    <button class="tab" data-view="market">Fleet Market</button>
+    <button class="tab" data-view="contracts">Rental Contracts</button>
+    <button class="tab" data-view="reviews">Reviews</button>
+    <button class="tab" data-view="corporate">Corporate</button>
+    <button class="tab" data-view="financials">Financials</button>
+    <button class="tab" data-view="office">Manager Office</button>
+  </nav>
+
+  <main>
+    <section id="branch" class="view active">
+      <div class="metrics" id="metrics"></div>
+      <div class="branch-grid">
+        <div class="panel lot-panel">
+          <div class="panel-title"><h2>Branch Parking Lot</h2><span id="lotSummary"></span></div>
+          <div class="lot-zones">
+            <div><h3>Ready Row</h3><div id="readyLot" class="parking-lot"></div></div>
+            <div><h3>Return / Cleaning Row</h3><div id="returnLot" class="parking-lot"></div></div>
+            <div><h3>Hold / Maintenance</h3><div id="holdLot" class="parking-lot"></div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><h2>Live Operations</h2><span>Branch events</span></div>
+          <div id="eventFeed" class="event-feed"></div>
+        </div>
+      </div>
+      <div class="bottom-grid">
+        <div class="panel"><div class="panel-title"><h2>Customers Waiting</h2></div><div id="customerQueue"></div></div>
+        <div class="panel"><div class="panel-title"><h2>Today's Work</h2></div><div id="workQueue"></div></div>
+      </div>
+    </section>
+
+    <section id="customers" class="view">
+      <div class="panel">
+        <div class="panel-title"><h2>Customer Counter</h2><button id="serveNextBtn">Serve Next Customer</button></div>
+        <div id="customerCounter"></div>
+      </div>
+    </section>
+
+    <section id="reservations" class="view"><div class="panel"><div class="panel-title"><h2>Reservation Board</h2><button id="newReservationBtn">+ Walk-In</button></div><div id="reservationTable"></div></div></section>
+    <section id="fleet" class="view"><div class="panel"><div class="panel-title"><h2>Fleet Management</h2></div><div id="fleetTable"></div></div></section>
+    <section id="returns" class="view"><div class="panel"><div class="panel-title"><h2>Returns & Damage Inspection</h2></div><div id="returnsList"></div></div></section>
+    <section id="employees" class="view"><div class="panel"><div class="panel-title"><h2>Employees</h2></div><div id="employeeCards" class="cards"></div></div></section>
+    <section id="schedule" class="view"><div class="panel"><div class="panel-title"><h2>Weekly Schedule</h2></div><div id="scheduleTable"></div></div></section>
+    <section id="transfers" class="view"><div class="panel"><div class="panel-title"><h2>Branch Transfers</h2></div><div id="transferPanel"></div></div></section>
+    <section id="market" class="view"><div class="panel"><div class="panel-title"><h2>Fleet Market</h2></div><div id="marketPanel"></div></div></section>
+    <section id="contracts" class="view"><div class="panel"><div class="panel-title"><h2>Rental Contracts</h2></div><div id="contractsPanel"></div></div></section>
+<section id="reviews" class="view"><div class="panel"><div class="panel-title"><h2>Customer Reviews</h2></div><div id="reviewsPanel"></div></div></section>
+<section id="corporate" class="view"><div class="panel"><div class="panel-title"><h2>Corporate & Career</h2></div><div id="corporatePanel"></div></div></section>
+    <section id="financials" class="view"><div class="metrics" id="financialMetrics"></div><div class="panel"><div class="panel-title"><h2>Daily Financial Activity</h2></div><div id="ledger"></div></div></section>
+    <section id="office" class="view">
+      <div class="office-grid">
+        <div class="panel"><div class="panel-title"><h2>Manager Computer</h2></div>
+          <div class="office-icons">
+            <button data-office="emails">📧 Email</button><button data-office="reports">📊 Reports</button>
+            <button data-office="cases">🧾 Customer Cases</button><button data-office="maintenance">🔧 Maintenance</button>
+            <button data-office="phone">📱 Manager Phone</button><button data-office="reputation">⭐ Reputation</button>
+          </div>
+        </div>
+        <div class="panel"><div class="panel-title"><h2>Manager Inbox</h2></div><div id="managerInbox"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="modal"><div id="modalContent"></div><form method="dialog"><button>Close</button></form></dialog>
+<script src="app.js"></script>
+</body>
+</html>
