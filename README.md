@@ -1,8 +1,8 @@
-# Horizon Rental Manager v0.9.0
+# Horizon Rental Manager v0.9.1
 
 This version redesigns the actual game around a national rental-car branch workflow.
 
-## Major v0.9.0 changes
+## Major v0.9.1 changes
 - Main gameplay screen now resembles a real rental branch operating dashboard.
 - Customer queue on the left with wait time and next-hour arrivals.
 - Selected customer physically appears at the desk with changing dialogue.
@@ -31,7 +31,7 @@ Replace the existing files in your `rental` repository with:
 Then commit the changes. GitHub Pages will update automatically.
 
 
-## v0.9.0 stability fixes
+## v0.9.1 stability fixes
 - Simulation time is dramatically slower.
 - Normal speed is 1 game minute every 2.5 real seconds.
 - Slow speed is 1 game minute every 5 real seconds.
@@ -48,7 +48,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Vehicle availability is rechecked when the rental is finalized.
 
 
-## v0.9.0 — Required customer walk-around
+## v0.9.1 — Required customer walk-around
 - Assigning a vehicle no longer means the customer immediately drives away.
 - The rental agreement is created first, then the exact vehicle moves to `Walk-Around`.
 - A customer walk-around is required before the car becomes `Rented`.
@@ -62,7 +62,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Return processing now compares return condition to the checkout walk-around.
 - New return damage is permanently added to that exact vehicle's history and marked as return damage.
 
-## v0.9.0 — Time speed correction
+## v0.9.1 — Time speed correction
 - The day now starts on Slow speed.
 - Slow: 1 game minute every 60 real seconds.
 - Normal: 1 game minute every 30 real seconds.
@@ -70,7 +70,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Manual +5 and +15 minute buttons remain available when you want to move ahead quickly.
 
 
-## v0.9.0 — Living branch operations expansion
+## v0.9.1 — Living branch operations expansion
 - Autonomous rental agents can serve customers while you manage the branch.
 - Service staff move returned cars into the cleaning workflow.
 - Live manager phone calls: rental extensions, insurance replacement rentals, body-shop referrals, roadside calls, and inter-branch transfer requests.
@@ -88,7 +88,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Career progression foundation.
 - Existing damage/walk-around history remains permanently tied to each vehicle.
 
-## v0.9.0 — Clock engine fix
+## v0.9.1 — Clock engine fix
 - Replaced the repeating interval clock with a single self-scheduling timeout.
 - A timer token prevents old/duplicate clock loops from continuing in the background.
 - Slow is now exactly one game minute after 60 real seconds.
@@ -97,14 +97,14 @@ Then commit the changes. GitHub Pages will update automatically.
 - Added a visible countdown showing exactly how many real seconds remain until the next game minute.
 - Added cache-busting version strings to app.js and style.css so GitHub Pages does not keep serving an older, faster JavaScript file.
 
-## v0.9.0 — Operations screen repair
+## v0.9.1 — Operations screen repair
 - Fixed the blank Operations page caused by older saves missing v0.6 fields.
 - Added a save migration layer that fills in phone queue, DNR, overdue, accounts, branches, career, employee history, vehicle key data, and other newer state automatically.
 - Older v0.4–v0.6.1 browser saves can now be loaded and upgraded.
 - Operations rendering is now defensive so one missing field cannot blank the whole page.
-- Updated cache-busting to v0.9.0.
+- Updated cache-busting to v0.9.1.
 
-## v0.9.0 — Daily operations simulation
+## v0.9.1 — Daily operations simulation
 - New Daily Planner screen with an hourly 7 AM–7 PM timeline.
 - Pickups, projected returns, staffing, cleaning capacity, and projected class shortages are visible by hour.
 - One-click inter-branch transfer requests from shortage cards.
@@ -120,7 +120,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Recovery screen allows restoring one of the latest snapshots.
 - Keyboard shortcut P opens the Daily Planner.
 
-## v0.9.0 — Deep customers, agreements, vehicles, and employees
+## v0.9.1 — Deep customers, agreements, vehicles, and employees
 - New persistent Customer CRM with loyalty, rental count, lifetime spend, preferences, complaints, notes, and DNR status.
 - Customer preferences can affect satisfaction and vehicle-assignment outcomes.
 - Protection is now presented as a customer conversation rather than only checkboxes.
@@ -136,7 +136,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Career XP now grows with daily performance and can unlock internal management opportunities.
 - Calendar-year rollover increases employee tenure and depreciates fleet value.
 
-## v0.9.0 — Physical branch & living-world update
+## v0.9.1 — Physical branch & living-world update
 - New Manager Office screen with clickable computer, phone, inbox, whiteboard, window, and calendar.
 - Employees can knock on the manager's door with customer, scheduling, pay, and vehicle problems.
 - New physical Parking Lot with numbered Ready, Return, Cleaning, Maintenance, and Overflow spaces.
@@ -148,3 +148,12 @@ Then commit the changes. GitHub Pages will update automatically.
 - Career can progress into Area Manager — Northeast Indiana.
 - Area Manager mode oversees Warsaw, Columbia City, Goshen, Fort Wayne Airport, and Fort Wayne Downtown.
 - The world layer is connected to the existing planner, fleet, employees, financials, customer CRM, agreements, cleaning, maintenance, and recovery systems.
+
+## v0.9.1 — Coverage conversation & guided rental flow
+- Customers now explicitly tell the rental agent which protection/coverage options they want.
+- Customer requests include LDW only, LDW + roadside, full protection, roadside only, or declining all optional coverage.
+- One button applies exactly what the customer requested; the full product screen remains available for changes.
+- Selecting a vehicle now immediately explains the next step and provides a prominent Continue to Rental Agreement button.
+- The rental agreement cannot proceed until the customer's coverage decision is confirmed.
+- After payment authorization and signature, the game explicitly directs the manager to Start Vehicle Walk-Around.
+- The intended transaction flow is now: customer coverage choice → exact vehicle → agreement → payment authorization → signature → walk-around → release vehicle.

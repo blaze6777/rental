@@ -1,5 +1,5 @@
 
-const SAVE_KEY="horizonRentalManager_v090";
+const SAVE_KEY="horizonRentalManager_v091";
 const CLASSES=["Economy","Midsize","Full Size","SUV","Premium SUV","Minivan","Pickup"];
 const MODELS=[
 ["Chevrolet Equinox","SUV"],["Nissan Rogue","SUV"],["Ford Explorer","Premium SUV"],["Toyota Highlander","SUV"],
@@ -37,7 +37,7 @@ function makeReservation(i){
 function newState(){
  let fleet=Array.from({length:28},(_,i)=>makeVehicle(i));
  return{
-  version:"0.9.0",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
+  version:"0.9.1",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
   fleet,reservations:Array.from({length:15},(_,i)=>makeReservation(i)),selectedReservation:null,selectedVehicle:null,pendingWalkaround:null,simSpeed:"slow",
   cleaningBays:[null,null,null,null,null,null],cleaningQueue:[],events:[],contracts:[],returnsToday:7,rentalsToday:18,
   phoneQueue:[],overdue:[],dnr:[],accounts:[
@@ -284,10 +284,7 @@ function gatherProducts(r){
  r.products.damage=$("#productDamage").checked;r.products.liability=$("#productLiability").checked;r.products.roadside=$("#productRoadside").checked;
  r.products.fuel=$("#productFuel").checked;r.products.driver=$("#productDriver").checked;r.products.seat=$("#productSeat").checked
 }
-window.selectVehicle=id=>{
- const v=state.fleet.find(x=>x.id===id);if(!v||v.status!=="Ready")return showModal("Vehicle Unavailable","That vehicle is no longer Ready.");
- state.selectedVehicle=id;renderAssign()
-}
+window.selectVehicle=id=>{state.selectedVehicle=id;render();const r=selected(),v=state.fleet.find(x=>x.id===id);if(r&&v)showModal("Vehicle Selected",`<div class="selected-vehicle-banner"><b>Unit ${v.unit} — ${v.model}</b><br>${v.class} • ${v.miles.toLocaleString()} miles</div><div class="next-step"><strong>NEXT STEP:</strong> Create the rental agreement, authorize payment, sign it, then complete the walk-around.</div><button class="primary" onclick="openAgreementPreview()">Continue to Rental Agreement →</button>`)}
 window.assignVehicle=id=>{
  const r=selected(),v=state.fleet.find(x=>x.id===id);if(!r||!v)return;
  if(!r.agreementSigned){state.selectedVehicle=id;return openAgreementPreview()}
@@ -643,7 +640,7 @@ function estimateAgreement(r,v){
 }
 window.openAgreementPreview=()=>{
  const r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle);if(!r||!v)return showModal("Rental Agreement","Select an exact vehicle first.");
- const p=customerProfile(r.customer.id);if(p?.dnr)return showModal("Do Not Rent Alert",`${p.name} is currently on the Do Not Rent list. Manager override is required.`);
+ const p=customerProfile(r.customer.id);if(!r.coverageConfirmed)return askCustomerCoverage();if(p?.dnr)return showModal("Do Not Rent Alert",`${p.name} is currently on the Do Not Rent list. Manager override is required.`);
  const a=estimateAgreement(r,v);
  $("#modalBody").innerHTML=`<div class="agreement-paper"><h2>HORIZON RENTAL AGREEMENT — ESTIMATE</h2>
  <div class="agreement-cols"><div class="agreement-box"><b>Renter</b><br>${r.customer.name}<br>${p?.loyalty||"Non-member"}<br><br><b>Reservation</b> ${r.code||r.id}</div>
@@ -663,7 +660,37 @@ window.authorizePayment=()=>{
 window.signAgreement=()=>{
  const r=selected();if(!r)return;
  if(!r.paymentAuthorized)return showModal("Payment Required","Authorize the renter's payment method before signing the agreement.");
- r.agreementSigned=true;$("#modal").close();window.assignVehicle(state.selectedVehicle)
+ r.agreementSigned=true;$("#modal").close();showModal("Agreement Signed",`Agreement signed and payment authorized.<div class="next-step"><strong>NEXT STEP:</strong> Walk outside with ${r.customer.name} and inspect the assigned vehicle together.</div><button class="primary" onclick="document.querySelector(\'#modal\').close();assignVehicle(state.selectedVehicle)">Start Vehicle Walk-Around →</button>`)
+}
+
+
+function customerCoverageRequest(r){
+ if(r.customerCoverageRequest)return r.customerCoverageRequest;
+ const profile=customerProfile(r.customer.id);
+ let type;
+ if(profile?.preferences?.includes("Usually declines protection")) type="none";
+ else type=pick(["ldw","ldw-roadside","full","none","roadside"]);
+ const map={
+  "ldw":{text:"I want the damage waiver, but I don't need the other extras.",products:{damage:true,liability:false,roadside:false,fuel:false,driver:false,seat:false}},
+  "ldw-roadside":{text:"I'd like the damage waiver and roadside assistance.",products:{damage:true,liability:false,roadside:true,fuel:false,driver:false,seat:false}},
+  "full":{text:"I want the full coverage options you offer — damage waiver, liability, and roadside.",products:{damage:true,liability:true,roadside:true,fuel:false,driver:false,seat:false}},
+  "none":{text:"No extra coverage for me. I'll use my own insurance.",products:{damage:false,liability:false,roadside:false,fuel:false,driver:false,seat:false}},
+  "roadside":{text:"I don't want the damage coverage, but add roadside assistance.",products:{damage:false,liability:false,roadside:true,fuel:false,driver:false,seat:false}}
+ };
+ r.customerCoverageRequest={type,...map[type]};
+ return r.customerCoverageRequest
+}
+window.askCustomerCoverage=()=>{
+ const r=selected();if(!r)return;
+ const req=customerCoverageRequest(r);
+ showModal("Customer Coverage Request",`<div class="office-convo"><b>${r.customer.name}:</b><br>"${req.text}"</div>
+ <p>You can apply exactly what the customer requested, or open the full product screen if they want to change anything.</p>
+ <button class="primary" onclick="applyCustomerCoverage()">Apply Customer Request</button> <button onclick="openProtection()">Review / Change Products</button>`)
+}
+window.applyCustomerCoverage=()=>{
+ const r=selected();if(!r)return;const req=customerCoverageRequest(r);
+ r.products={...req.products};r.protectionDecision=req.type==="none"?"Declined":"Customer Selected";r.coverageConfirmed=true;
+ $("#modal").close();render()
 }
 
 function protectionConversation(r){

@@ -113,3 +113,7 @@ dialog{width:min(760px,95vw);border:1px solid #60717b;border-radius:7px;padding:
 .event-card{background:#fff;border-left:5px solid #9b7424;padding:10px;margin:8px 0;border-radius:4px}.roadside-card{border-left-color:#b03b34}
 .branch-network{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.branch-node{background:#fff;border:1px solid #ccd6db;border-radius:8px;padding:12px}
 .knock{background:#fff7db;border:1px solid #d5b55a;border-radius:8px;padding:12px;margin-bottom:10px}
+
+.next-step{background:#fff8d8;border:2px solid #d3a92f;border-radius:8px;padding:10px;margin:10px 0}
+.next-step strong{font-size:13px}.coverage-choice{background:#f3f8f5;border:1px solid #b9d4c5;border-radius:7px;padding:10px;margin:8px 0}
+.coverage-choice button{margin-top:6px}.selected-vehicle-banner{background:#e9f7ef;border:2px solid #168b58;border-radius:8px;padding:10px;margin:8px 0}
