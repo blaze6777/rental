@@ -74,3 +74,42 @@ dialog{width:min(760px,95vw);border:1px solid #60717b;border-radius:7px;padding:
 .board-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.board-note{border:2px solid #2b3c45;padding:10px;min-height:100px}
 .phone-ringing{animation:ringPulse 1s infinite;background:#8d3d25!important;color:white!important}@keyframes ringPulse{50%{transform:scale(1.04)}}
 .employee-auto{display:inline-block;background:#daf4e7;color:#08704a;border-radius:999px;padding:2px 6px;font-size:9px}
+
+.planner-top{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.planner-kpi{background:#fff;border:1px solid #c9d3d8;border-radius:7px;padding:10px}.planner-kpi b{font-size:22px;display:block}
+.timeline{background:#fff;border:1px solid #c9d3d8;border-radius:8px;overflow:hidden}
+.timeline-head,.timeline-row{display:grid;grid-template-columns:80px 1fr 1fr 1fr 1fr;align-items:stretch}
+.timeline-head{background:#1d2d36;color:#fff;font-weight:700}
+.timeline-head>div,.timeline-row>div{padding:8px;border-right:1px solid #d8e0e4;border-bottom:1px solid #e4eaed}
+.timeline-row.now{background:#edf9f3}.timeline-row.shortage{background:#fff1ef}
+.pill{display:inline-block;border-radius:999px;padding:3px 7px;margin:2px;font-size:10px;background:#e7eef2}.pill.red{background:#ffd9d5;color:#812a25}.pill.green{background:#d9f3e7;color:#08704a}.pill.orange{background:#fff0cf;color:#7a5410}
+.staff-board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.staff-card{background:#fff;border:1px solid #ccd6db;border-radius:7px;padding:10px}
+.staff-card select{width:100%;padding:6px;margin-top:7px}
+.forecast-strip{display:flex;gap:5px;flex-wrap:wrap}.forecast-box{min-width:105px;background:#fff;border:1px solid #ccd6db;border-radius:6px;padding:7px}
+.forecast-box.bad{border-color:#d84b45;background:#fff0ef}.forecast-box.good{border-color:#159b61;background:#effbf5}
+.finance-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+
+.customer-grid{display:grid;grid-template-columns:repeat(3,minmax(240px,1fr));gap:10px}
+.customer-card{background:#fff;border:1px solid #ccd6db;border-radius:8px;padding:12px}.customer-card.vip{border-top:4px solid #caa13b}
+.profile-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.profile-tabs button{padding:7px 10px}
+.agreement-paper{background:#fff;border:1px solid #bfc9ce;border-radius:5px;padding:18px;max-width:900px;margin:auto;box-shadow:0 2px 8px #0001}
+.agreement-paper h2{border-bottom:2px solid #172830;padding-bottom:8px}
+.agreement-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}.agreement-box{border:1px solid #d4dcdf;padding:10px}
+.signature-box{height:62px;border:1px dashed #89979e;padding:8px;margin-top:10px;background:#fbfcfc}
+.payment-card{background:#f5f8f9;border:1px solid #cbd5da;border-radius:7px;padding:10px;margin:7px 0}
+.vehicle-tabs{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0}.vehicle-tabs button{font-size:10px;padding:5px 8px}
+.history-table{width:100%;border-collapse:collapse}.history-table th,.history-table td{border-bottom:1px solid #dde4e7;padding:7px;text-align:left}
+.office-convo{background:#f2f7f5;border-left:4px solid #118b58;padding:10px;margin:8px 0}
+.dnr-badge{background:#8d2525;color:#fff;padding:3px 7px;border-radius:999px;font-size:10px}
+.loyalty-badge{background:#d9f3e7;color:#08704a;padding:3px 7px;border-radius:999px;font-size:10px}
+
+.office-room{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.office-object{background:#fff;border:1px solid #cbd5da;border-radius:10px;padding:18px;min-height:120px;cursor:pointer;box-shadow:0 2px 6px #0001}
+.office-object:hover{transform:translateY(-1px);box-shadow:0 4px 10px #0002}.office-object h3{margin:0 0 7px}
+.lot-map{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:7px;background:#4d5559;padding:12px;border-radius:10px}
+.parking-space{background:#e9edef;border:2px solid #fff;min-height:85px;padding:6px;border-radius:3px;font-size:10px}.parking-space.empty{opacity:.55}
+.parking-space.return{background:#fff3d9}.parking-space.cleaning{background:#e3f4ff}.parking-space.maintenance{background:#ffe1df}.parking-space.ready{background:#e4f6eb}
+.space-label{font-weight:800;font-size:9px;opacity:.65}.vehicle-mini{font-weight:700;margin-top:5px}
+.event-card{background:#fff;border-left:5px solid #9b7424;padding:10px;margin:8px 0;border-radius:4px}.roadside-card{border-left-color:#b03b34}
+.branch-network{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.branch-node{background:#fff;border:1px solid #ccd6db;border-radius:8px;padding:12px}
+.knock{background:#fff7db;border:1px solid #d5b55a;border-radius:8px;padding:12px;margin-bottom:10px}

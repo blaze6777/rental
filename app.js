@@ -1,5 +1,5 @@
 
-const SAVE_KEY="horizonRentalManager_v060";
+const SAVE_KEY="horizonRentalManager_v090";
 const CLASSES=["Economy","Midsize","Full Size","SUV","Premium SUV","Minivan","Pickup"];
 const MODELS=[
 ["Chevrolet Equinox","SUV"],["Nissan Rogue","SUV"],["Ford Explorer","Premium SUV"],["Toyota Highlander","SUV"],
@@ -37,7 +37,7 @@ function makeReservation(i){
 function newState(){
  let fleet=Array.from({length:28},(_,i)=>makeVehicle(i));
  return{
-  version:"0.6.0",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
+  version:"0.9.0",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
   fleet,reservations:Array.from({length:15},(_,i)=>makeReservation(i)),selectedReservation:null,selectedVehicle:null,pendingWalkaround:null,simSpeed:"slow",
   cleaningBays:[null,null,null,null,null,null],cleaningQueue:[],events:[],contracts:[],returnsToday:7,rentalsToday:18,
   phoneQueue:[],overdue:[],dnr:[],accounts:[
@@ -53,6 +53,15 @@ function newState(){
   ],
   keys:{},morningShown:false,areaManager:{lastVisit:null,nextVisitDay:4},
   career:{title:"Branch Manager",xp:24,level:1,next:"Airport Branch Manager"},
+  dailyHistory:[],autoSaves:[],transfers:[],oneWays:[],damageClaims:[],
+  expensesToday:{labor:0,fuel:0,maintenance:0,transfers:0,cleaning:0,adjustments:0},
+  staffAssignments:{},plannerNotes:[],
+  fleetPurchases:[],fleetSales:[],
+  customerProfiles:[],paymentEvents:[],billingDisputes:[],employeeReviews:[],
+  internalJobs:[{id:"FW-AIR-BM",title:"Fort Wayne Airport Branch Manager",fleet:186,employees:24,annualRevenue:8400000,status:"Locked"}],
+  branchYears:0,
+  parkingSpaces:[],managerVisitors:[],roadsideCases:[],rareEvents:[],fleetDeliveries:[],
+  branchRelationships:{},areaMode:false,managedBranches:[],
   satisfaction:92,revenueToday:4820,laborToday:1140,branchStatus:"Running Smoothly",managerInbox:[],
   employees:[
    {name:"Megan Harper",role:"Assistant Manager",status:"Working",task:"Counter",sales:82,service:91,years:4,pay:24.5,attendance:96,history:["Promoted to Assistant Manager"],auto:true},
@@ -64,7 +73,7 @@ function newState(){
   ]
  }
 }
-let state=newState(),timer=null,vehicleFilter="available";
+let state=newState(),timer=null,timerToken=0,nextTickAt=0,timerCountdown=null,vehicleFilter="available";
 state.fleet.forEach(v=>{if(!v.keyLocation)v.keyLocation=v.status==="Rented"?"Customer":v.status==="Maintenance"?"Maintenance":"Key Cabinet";v.nextService=v.miles+Math.floor(800+Math.random()*3500);v.registration="2027-06";v.recall=Math.random()<.08?"Open recall":"Clear"});
 
 function waiting(){return state.reservations.filter(r=>r.status==="Waiting").sort((a,b)=>(a.arrived||a.pickup)-(b.arrived||b.pickup))}
@@ -81,10 +90,64 @@ initCleaning();
 state.selectedReservation=waiting()[0]?.id||state.reservations[0].id;
 setTimeout(()=>{if(!state.phoneQueue.length){addPhone("Body Shop Referral","Lake City Collision has a customer arriving after a collision and needs an insurance replacement vehicle.",[{label:"Accept referral",fn:"accept"},{label:"Decline",fn:"deny"}]);render()}},1200);
 
+
+function migrateState(s){
+ const fresh=newState();
+ // Preserve user's existing game while supplying every field newer versions need.
+ s={...fresh,...s};
+ s.date=s.date instanceof Date?s.date:new Date(s.date||fresh.date);
+ s.phoneQueue=Array.isArray(s.phoneQueue)?s.phoneQueue:[];
+ s.overdue=Array.isArray(s.overdue)?s.overdue:[];
+ s.dnr=Array.isArray(s.dnr)?s.dnr:[];
+ s.accounts=Array.isArray(s.accounts)&&s.accounts.length?s.accounts:fresh.accounts;
+ s.branches=Array.isArray(s.branches)&&s.branches.length?s.branches:fresh.branches;
+ s.managerInbox=Array.isArray(s.managerInbox)?s.managerInbox:[];
+ s.contracts=Array.isArray(s.contracts)?s.contracts:[];
+ s.cleaningQueue=Array.isArray(s.cleaningQueue)?s.cleaningQueue:[];
+ s.cleaningBays=Array.isArray(s.cleaningBays)?s.cleaningBays:[null,null,null,null,null,null];
+ s.career=s.career||fresh.career;
+ s.areaManager=s.areaManager||fresh.areaManager;
+ s.dailyHistory=Array.isArray(s.dailyHistory)?s.dailyHistory:[];
+ s.autoSaves=Array.isArray(s.autoSaves)?s.autoSaves:[];
+ s.transfers=Array.isArray(s.transfers)?s.transfers:[];
+ s.oneWays=Array.isArray(s.oneWays)?s.oneWays:[];
+ s.damageClaims=Array.isArray(s.damageClaims)?s.damageClaims:[];
+ s.expensesToday={labor:0,fuel:0,maintenance:0,transfers:0,cleaning:0,adjustments:0,...(s.expensesToday||{})};
+ s.staffAssignments=s.staffAssignments||{};
+ s.plannerNotes=Array.isArray(s.plannerNotes)?s.plannerNotes:[];
+ s.fleetPurchases=Array.isArray(s.fleetPurchases)?s.fleetPurchases:[];
+ s.fleetSales=Array.isArray(s.fleetSales)?s.fleetSales:[];
+ s.customerProfiles=Array.isArray(s.customerProfiles)?s.customerProfiles:[];
+ s.paymentEvents=Array.isArray(s.paymentEvents)?s.paymentEvents:[];
+ s.billingDisputes=Array.isArray(s.billingDisputes)?s.billingDisputes:[];
+ s.employeeReviews=Array.isArray(s.employeeReviews)?s.employeeReviews:[];
+ s.internalJobs=Array.isArray(s.internalJobs)&&s.internalJobs.length?s.internalJobs:fresh.internalJobs;
+ s.branchYears=Number(s.branchYears||0);
+ s.parkingSpaces=Array.isArray(s.parkingSpaces)?s.parkingSpaces:[];
+ s.managerVisitors=Array.isArray(s.managerVisitors)?s.managerVisitors:[];
+ s.roadsideCases=Array.isArray(s.roadsideCases)?s.roadsideCases:[];
+ s.rareEvents=Array.isArray(s.rareEvents)?s.rareEvents:[];
+ s.fleetDeliveries=Array.isArray(s.fleetDeliveries)?s.fleetDeliveries:[];
+ s.branchRelationships=s.branchRelationships||{};
+ s.areaMode=!!s.areaMode;s.managedBranches=Array.isArray(s.managedBranches)?s.managedBranches:[];
+ s.employees=(Array.isArray(s.employees)?s.employees:fresh.employees).map((e,i)=>({...fresh.employees[i%fresh.employees.length],...e,history:Array.isArray(e.history)?e.history:[]}));
+ s.fleet=(Array.isArray(s.fleet)?s.fleet:fresh.fleet).map(v=>({
+   condition:{front:[],rear:[],driver:[],passenger:[],glass:[],wheels:[],roof:[],interior:[]},
+   damage:[],history:[],keyLocation:"Key Cabinet",recall:"Clear",...v,
+   damage:Array.isArray(v.damage)?v.damage:[],
+   history:Array.isArray(v.history)?v.history:[]
+ }));
+ s.reservations=Array.isArray(s.reservations)?s.reservations:fresh.reservations;
+ if(!["slow","normal","fast"].includes(s.simSpeed))s.simSpeed="slow";
+ s.version="0.6.2";
+ return s
+}
+state=migrateState(state);
+
 function render(){
  $("#topDate").textContent=state.date.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric",year:"numeric"});
  $("#topTime").textContent=fmtTime(state.minute);$("#weatherText").textContent=state.weather;
- $("#playBtn").textContent=state.running?"⏸ Pause":"▶ Run"; if($("#speedSelect"))$("#speedSelect").value=state.simSpeed||"normal";
+ $("#playBtn").textContent=state.running?"⏸ Pause":"▶ Run"; if($("#speedSelect"))$("#speedSelect").value=state.simSpeed||"slow"; updateTimerStatus();
  renderQueue();renderCustomer();renderAssign();renderFacility();renderKpis();renderOtherScreens()
 }
 function renderQueue(){
@@ -227,12 +290,16 @@ window.selectVehicle=id=>{
 }
 window.assignVehicle=id=>{
  const r=selected(),v=state.fleet.find(x=>x.id===id);if(!r||!v)return;
+ if(!r.agreementSigned){state.selectedVehicle=id;return openAgreementPreview()}
  if(v.status!=="Ready")return showModal("Vehicle Unavailable","That vehicle is no longer available. Please select another.");
  gatherProducts(r);
  if(!r.idVerified||!r.paymentVerified){
    return showModal("Complete ID & Payment First","Use the <b>Check ID / Payment</b> button before completing the rental.")
  }
  r.assignedVehicle=v.id;
+ let cp=customerProfile(r.customer.id);
+ if(cp?.preferences.includes("Avoids Nissan")&&/Nissan/i.test(v.model)){state.satisfaction=Math.max(0,state.satisfaction-2);cp.complaints.push("Assigned Nissan despite preference.")}
+ if(cp?.preferences.includes("Prefers newer vehicles")&&v.year<2026){state.satisfaction=Math.max(0,state.satisfaction-1)}
  let extras=(r.products.damage?24.99:0)+(r.products.liability?14.99:0)+(r.products.roadside?6.99:0)+(r.products.driver?7:0)+(r.products.seat?13:0)+(r.products.fuel?64.99/r.days:0);
  let daily=r.rate+extras;state.revenueToday+=daily;state.rentalsToday++;
  let contract={id:uid(),number:`RA-${260900+state.contracts.length+1}`,customer:r.customer.name,customerId:r.customer.id,vehicle:v.unit,vehicleId:v.id,
@@ -360,27 +427,21 @@ function renderFacility(){
  $("#cleaningQueue").innerHTML=state.cleaningQueue.map(id=>{let v=state.fleet.find(x=>x.id===id);return `<span class="queue-chip">Queued: ${v?.unit||"?"}</span>`}).join("")
 }
 function lotCar(v,tall=false){return `<div class="lot-car" onclick="vehicleDetails('${v.id}')"><span>${v.unit}</span></div>`}
-window.vehicleDetails=id=>{let v=state.fleet.find(x=>x.id===id);showModal(`Unit ${v.unit} — ${v.model}`,`<b>Status:</b> ${v.status}<br><b>Class:</b> ${v.class}<br><b>Mileage:</b> ${v.miles.toLocaleString()}<br><b>Fuel:</b> ${v.fuel}/8<br><b>Cleanliness:</b> ${v.clean}%<br><b>Key:</b> ${v.keyLocation||"Unknown"}<br><b>Next Service:</b> ${(v.nextService||0).toLocaleString()} mi<br><b>Recall:</b> ${v.recall||"Clear"}<br><br><b>Damage History</b><br>${(v.damage||[]).length?(v.damage||[]).map(d=>`${d.date}: ${d.type} — ${WALK_AREAS.find(a=>a[0]===d.area)?.[1]||d.area} (${d.status})`).join("<br>"):"No damage history"}<br><br><b>Vehicle History</b><br>${v.history.map(h=>`${h.date}: ${h.text}`).join("<br>")}`)}
-function renderKpis(){
- const u=utilization();$("#carsOnLot").textContent=state.fleet.filter(v=>v.status!=="Rented").length;$("#lotBreakdown").textContent=`${ready().length} Ready • ${state.fleet.filter(v=>v.status==="Cleaning").length} Cleaning • ${state.fleet.filter(v=>v.status==="Maintenance").length} Maintenance`;
- $("#todaysRentals").textContent=state.rentalsToday;$("#rentalsBreakdown").textContent=`${state.contracts.filter(c=>c.status==="Open").length} currently out`;
- $("#returnsToday").textContent=state.returnsToday;$("#returnsBreakdown").textContent=`${state.fleet.filter(v=>v.status==="Returned").length} in return lane`;
- $("#utilKpi").textContent=u+"%";$("#utilBar").style.width=Math.min(100,u)+"%";$("#satKpi").textContent=state.satisfaction+"%";$("#satBar").style.width=state.satisfaction+"%";
- $("#revenueKpi").textContent=money(state.revenueToday);$("#laborKpi").textContent=`Labor ${money(state.laborToday)}`;$("#branchStatus").textContent=`● ${state.branchStatus}`;
- let problems=waiting().length>4||state.fleet.filter(v=>v.status==="Cleaning").length>6||ready().length<5;
- $("#branchMessage").textContent=problems?"Operational pressure building — review queue and vehicle readiness.":"Keep up the good work!"
-}
+window.vehicleDetails=id=>vehicleProfile(id)
+
 function tick(mins=5){
- state.minute+=mins;
- if(state.minute>=1140){state.minute=1140;state.running=false;if(timer){clearInterval(timer);timer=null}showModal("Branch Close",endOfDayReport())}
+ state.minute+=mins;applyOperatingCosts(mins);processTransfers();syncParking();if(state.minute%30<mins)autoSnapshot("30-minute autosave");if(state.minute%30<mins){maybeManagerVisitor();maybeRareEvent()}if(state.minute%60<mins&&Math.random()<.12)createRoadside();
+ if(state.minute>=1140){state.minute=1140;state.running=false;stopTimer();showModal("Branch Close",endOfDayReport())}
  // reservation arrivals
  autonomousStaff();operationalEvents();
  state.reservations.forEach(r=>{if(r.status==="Booked"&&r.pickup<=state.minute){r.status="Waiting";r.arrived=state.minute}});
  // clean bays progress
  state.cleaningBays.forEach((id,i)=>{if(!id)return;let v=state.fleet.find(x=>x.id===id);v.cleanRemaining=Math.max(0,v.cleanRemaining-mins);if(v.cleanRemaining===0){v.clean=100;v.status=v.fuel<6?"Fueling":"Ready";addHistory(v,`Cleaning completed in Bay ${i+1}.`);state.cleaningBays[i]=null}});
  fillCleaningBays();
+ // maintenance thresholds can pull vehicles out of service
+ state.fleet.filter(v=>v.status==="Ready"&&v.nextService&&v.miles>=v.nextService).slice(0,1).forEach(v=>{v.status="Maintenance";v.keyLocation="Maintenance";state.expensesToday.maintenance+=95;addHistory(v,"Preventive maintenance due; removed from Ready inventory.")});
  // fueling progress random
- if(state.minute%20<mins){let f=state.fleet.find(v=>v.status==="Fueling");if(f){f.fuel=8;f.status="Ready";addHistory(f,"Fueling completed; moved to Ready Row.")}}
+ if(state.minute%20<mins){let f=state.fleet.find(v=>v.status==="Fueling");if(f){f.fuel=8;f.status="Ready";state.expensesToday.fuel+=28;addHistory(f,"Fueling completed; moved to Ready Row.")}}
  // random return
  if(state.minute%45<mins&&Math.random()<.6){
  let r=state.reservations.find(x=>x.status==="Out");
@@ -389,7 +450,11 @@ function tick(mins=5){
    if(v){
      r.status="Returned";v.status="Returned";v.miles+=Math.floor(50+Math.random()*260);v.fuel=Math.max(1,Math.floor(2+Math.random()*6));v.clean=Math.floor(45+Math.random()*40);state.returnsToday++;
      let c=state.contracts.find(x=>x.vehicleId===v.id&&x.status==="Open");
-     if(c){c.returnMileage=v.miles;c.returnFuel=v.fuel;c.status="Returned - Inspection Pending"}
+     if(c){
+       c.returnMileage=v.miles;c.returnFuel=v.fuel;c.status="Returned - Inspection Pending";
+       c.returnCharges={fuel:v.fuel<6?(6-v.fuel)*12:0,cleaning:v.clean<55?75:0,late:0,damage:0};
+       state.revenueToday+=Object.values(c.returnCharges).reduce((a,n)=>a+n,0)
+     }
      if(Math.random()<.20){
        const [area,label]=pick(WALK_AREAS),type=pick(["Scratch","Dent","Chip/Crack","Scuff"]);
        const d={id:uid(),area,type,severity:"Return damage",date:state.date.toLocaleDateString(),status:"New Return Damage",source:"Return inspection"};
@@ -410,10 +475,331 @@ function fillCleaningBays(){
 }
 function nextDay(){
  if(state.pendingWalkaround){return showModal("Finish Current Walk-Around","Complete or cancel the active customer walk-around before advancing to the next day.")}
- state.date.setDate(state.date.getDate()+1);state.minute=420;state.employees.forEach(e=>{if(e.status==="Called Off")e.status="Working"});state.revenueToday=0;state.laborToday=0;state.rentalsToday=0;state.returnsToday=0;state.weather=pick(["68°F Clear","61°F Cloudy","58°F Rain","72°F Sunny","64°F Windy"]);
+ state.dailyHistory.unshift({date:state.date.toISOString(),revenue:state.revenueToday,profit:branchProfit(),rentals:state.rentalsToday,satisfaction:state.satisfaction,utilization:utilization()});
+ state.dailyHistory=state.dailyHistory.slice(0,30);careerCheck();autoSnapshot("End of day");
+ let oldYear=state.date.getFullYear();state.date.setDate(state.date.getDate()+1);if(state.date.getFullYear()>oldYear){state.branchYears++;state.fleet.forEach(v=>{v.year=v.year;v.value=Math.max(4000,(v.value||v.acquisition||30000)*.86)});state.employees.forEach(e=>e.years=(e.years||0)+1)}state.minute=420;state.expensesToday={labor:0,fuel:0,maintenance:0,transfers:0,cleaning:0,adjustments:0};state.employees.forEach(e=>{if(e.status==="Called Off")e.status="Working"});state.revenueToday=0;state.laborToday=0;state.rentalsToday=0;state.returnsToday=0;state.weather=pick(["68°F Clear","61°F Cloudy","58°F Rain","72°F Sunny","64°F Windy"]);
  state.reservations=Array.from({length:15},(_,i)=>makeReservation(i));state.selectedReservation=state.reservations[0].id;
  state.cleaningBays=[null,null,null,null,null,null];state.cleaningQueue=[];
  state.fleet.forEach(v=>{if(v.status==="Rented")v.status="Returned";if(v.status==="Cleaning"){v.cleanRemaining=Math.floor(10+Math.random()*35);state.cleaningQueue.push(v.id)}});fillCleaningBays();render();setTimeout(showMorningBoard,50)
+}
+
+
+function classKey(c){return (c||"").toLowerCase().replace(/\s+/g,"")}
+function expectedReturnMinute(r){
+ if(r.status==="Out") return Math.min(1080, Math.max(state.minute+30, r.pickup + 240 + ((r.days-1)*15)));
+ return null
+}
+
+
+function initParking(){
+ if(state.parkingSpaces.length)return;
+ const spaces=[];
+ for(let i=1;i<=24;i++)spaces.push({id:`R${String(i).padStart(2,"0")}`,zone:"Ready",vehicleId:null});
+ for(let i=1;i<=8;i++)spaces.push({id:`RET${i}`,zone:"Return",vehicleId:null});
+ for(let i=1;i<=6;i++)spaces.push({id:`C${i}`,zone:"Cleaning",vehicleId:null});
+ for(let i=1;i<=3;i++)spaces.push({id:`M${i}`,zone:"Maintenance",vehicleId:null});
+ for(let i=1;i<=8;i++)spaces.push({id:`O${i}`,zone:"Overflow",vehicleId:null});
+ state.parkingSpaces=spaces;syncParking()
+}
+function syncParking(){
+ if(!state.parkingSpaces?.length)return;
+ state.parkingSpaces.forEach(s=>s.vehicleId=null);
+ const wanted=v=>v.status==="Ready"?"Ready":v.status==="Returned"?"Return":v.status==="Cleaning"?"Cleaning":v.status==="Maintenance"?"Maintenance":null;
+ state.fleet.forEach(v=>{
+   const z=wanted(v);if(!z)return;
+   let s=state.parkingSpaces.find(x=>x.zone===z&&!x.vehicleId)||state.parkingSpaces.find(x=>x.zone==="Overflow"&&!x.vehicleId);
+   if(s){s.vehicleId=v.id;v.parkingSpace=s.id}
+ })
+}
+initParking();
+
+window.moveVehicleSpace=(vid,sid)=>{
+ const v=state.fleet.find(x=>x.id===vid),s=state.parkingSpaces.find(x=>x.id===sid);if(!v||!s||s.vehicleId)return;
+ state.parkingSpaces.forEach(x=>{if(x.vehicleId===vid)x.vehicleId=null});s.vehicleId=vid;v.parkingSpace=s.id;
+ if(s.zone==="Ready")v.status="Ready";if(s.zone==="Return")v.status="Returned";if(s.zone==="Cleaning")v.status="Cleaning";if(s.zone==="Maintenance")v.status="Maintenance";
+ addHistory(v,`Moved to parking space ${s.id} (${s.zone}).`);render()
+}
+window.openParkingSpace=sid=>{
+ const s=state.parkingSpaces.find(x=>x.id===sid),v=s?.vehicleId?state.fleet.find(x=>x.id===s.vehicleId):null;
+ if(!s)return;if(v)return vehicleProfile(v.id);
+ const candidates=state.fleet.filter(v=>["Ready","Returned","Cleaning","Maintenance"].includes(v.status)&&v.parkingSpace!==sid);
+ showModal(`Parking Space ${s.id}`,`<p>${s.zone} space is empty.</p>${candidates.slice(0,12).map(v=>`<button onclick="moveVehicleSpace('${v.id}','${s.id}');document.querySelector('#modal').close()">${v.unit} ${v.model}</button>`).join(" ")}`)
+}
+
+function maybeManagerVisitor(){
+ if(state.managerVisitors.some(x=>x.status==="Waiting"))return;
+ if(Math.random()<.035){
+   const e=pick(state.employees.filter(x=>x.status==="Working"));
+   if(e)state.managerVisitors.push({id:uid(),employee:e.name,reason:pick(["Upset customer needs manager help","Schedule question","Pay question","Vehicle problem at the counter","Needs approval for a customer adjustment"]),status:"Waiting",minute:state.minute})
+ }
+}
+window.handleVisitor=id=>{
+ let x=state.managerVisitors.find(v=>v.id===id);if(!x)return;
+ showModal(`${x.employee} is at your door`,`<div class="office-convo">"${x.reason}. Do you have a minute?"</div><button onclick="resolveVisitor('${id}','talk')">Talk Now</button> <button onclick="resolveVisitor('${id}','delegate')">Delegate It</button> <button onclick="resolveVisitor('${id}','later')">Ask Them to Return Later</button>`)
+}
+window.resolveVisitor=(id,a)=>{let x=state.managerVisitors.find(v=>v.id===id);if(!x)return;x.status="Resolved";x.result=a;if(a==="talk")state.satisfaction=Math.min(100,state.satisfaction+1);if(a==="later")state.satisfaction=Math.max(0,state.satisfaction-1);$("#modal").close();render()}
+
+function createRoadside(){
+ const v=pick(state.fleet.filter(x=>x.status==="Rented"));if(!v)return;
+ if(state.roadsideCases.some(x=>x.vehicleId===v.id&&x.status==="Open"))return;
+ state.roadsideCases.push({id:uid(),vehicleId:v.id,customer:"Current renter",distance:Math.floor(8+Math.random()*55),problem:pick(["Check-engine light and shaking","Flat tire","Vehicle will not start","Warning light and reduced power","Keys locked inside vehicle"]),status:"Open",cost:0})
+}
+window.openRoadside=id=>{
+ let c=state.roadsideCases.find(x=>x.id===id),v=state.fleet.find(x=>x.id===c?.vehicleId);if(!c||!v)return;
+ showModal("Roadside Assistance",`<div class="event-card roadside-card"><b>Unit ${v.unit} — ${v.model}</b><br>${c.distance} miles from branch<br><br>"${c.problem}"</div>
+ <button onclick="resolveRoadside('${id}','roadside')">Dispatch Roadside</button> <button onclick="resolveRoadside('${id}','replacement')">Send Replacement</button> <button onclick="resolveRoadside('${id}','tow')">Authorize Tow</button>`)
+}
+window.resolveRoadside=(id,a)=>{let c=state.roadsideCases.find(x=>x.id===id),v=state.fleet.find(x=>x.id===c?.vehicleId);if(!c||!v)return;c.status="Resolved";
+ if(a==="roadside"){c.cost=85;state.expensesToday.maintenance+=85}
+ if(a==="replacement"){c.cost=45;state.expensesToday.transfers+=45;let repl=state.fleet.find(x=>x.status==="Ready"&&x.class===v.class);if(repl){repl.status="Rented";repl.keyLocation="Customer"}}
+ if(a==="tow"){c.cost=225;state.expensesToday.maintenance+=225;v.status="Maintenance";v.keyLocation="Repair Shop";addHistory(v,`Towed after roadside case: ${c.problem}`)}
+ $("#modal").close();syncParking();render()
+}
+
+function maybeRareEvent(){
+ if(state.rareEvents.some(e=>e.status==="Active"))return;
+ if(Math.random()<.008){
+  const type=pick(["Major Corporate Booking","Credit Card Outage","Recall Notice","Severe Weather Extensions","Transporter Delivery"]);
+  let ev={id:uid(),type,status:"Active",minute:state.minute};
+  if(type==="Major Corporate Booking"){ev.text="A local manufacturer needs 12 vehicles tomorrow.";state.reservations.push(...[])}
+  if(type==="Credit Card Outage")ev.text="Card authorizations may fail for the next two game hours.";
+  if(type==="Recall Notice"){let vs=state.fleet.filter(v=>v.status==="Ready").slice(0,Math.min(4,state.fleet.length));vs.forEach(v=>{v.status="Maintenance";v.recall="OPEN RECALL"});ev.text=`${vs.length} vehicles were grounded by a new recall.`}
+  if(type==="Severe Weather Extensions"){ev.text="Snow is causing multiple renters to extend. Tomorrow's availability may tighten.";state.reservations.filter(r=>r.status==="Out").slice(0,4).forEach(r=>r.days++)}
+  if(type==="Transporter Delivery"){ev.text="Corporate is sending 4 new fleet units. They require intake before rental.";createFleetDelivery(4)}
+  state.rareEvents.push(ev)
+ }
+}
+window.resolveRareEvent=id=>{let e=state.rareEvents.find(x=>x.id===id);if(e)e.status="Resolved";render()}
+
+function createFleetDelivery(n=4){
+ for(let i=0;i<n;i++)state.fleetDeliveries.push({id:uid(),unit:String(3200+state.fleetDeliveries.length+state.fleet.length),model:pick(["2027 Chevrolet Equinox","2027 Toyota Camry","2027 Nissan Rogue","2027 Chrysler Pacifica"]),status:"Awaiting Intake"})
+}
+window.intakeFleet=id=>{
+ let d=state.fleetDeliveries.find(x=>x.id===id);if(!d)return;
+ let v=makeVehicle(state.fleet.length+1);v.unit=d.unit;v.model=d.model.replace(/^2027 /,"");v.year=2027;v.status="Ready";v.clean=100;v.fuel=8;v.miles=Math.floor(4+Math.random()*20);v.keyLocation="Key Cabinet";v.acquisition=32000;v.history=[];addHistory(v,"New fleet delivery received, inspected, fueled and staged.");state.fleet.push(v);d.status="In Service";syncParking();render()
+}
+
+function initBranchRelationships(){
+ state.branches.forEach(b=>{if(!state.branchRelationships[b.name])state.branchRelationships[b.name]={score:Math.floor(45+Math.random()*45),manager:pick(["Morgan Reed","Chris Walker","Dana Lopez","Taylor Bennett"])}});
+}
+initBranchRelationships();
+window.callBranch=name=>{
+ let rel=state.branchRelationships[name];if(!rel)return;
+ const helpful=rel.score>=60;
+ showModal(`${name} — ${rel.manager}`,`<div class="office-convo">Relationship ${rel.score}/100<br><br>${helpful?'"Tell me what you need. If I have the cars, I can help you out."':'"We are pretty tight ourselves. I cannot promise much today."'}</div><button onclick="documentBranchCall('${name}',${helpful})">${helpful?"Ask for Fleet Help":"Ask Anyway"}</button>`)
+}
+window.documentBranchCall=(name,helpful)=>{let rel=state.branchRelationships[name];rel.score=Math.max(0,Math.min(100,rel.score+(helpful?1:-2)));$("#modal").close();render()}
+
+window.officeAction=a=>{
+ if(a==="computer"){let b=$$(".nav-btn").find(x=>x.dataset.screen==="planner");if(b)b.click()}
+ if(a==="phone"){let q=state.phoneQueue[0];if(q)answerPhone(q.id);else showModal("Manager Phone","No calls are waiting right now.")}
+ if(a==="inbox")showModal("Manager Inbox",`${state.managerInbox.slice(0,8).map(x=>`<p>${x}</p>`).join("")||"<p>Inbox is clear.</p>"}`)
+ if(a==="whiteboard")showMorningBoard()
+ if(a==="window"){let b=$$(".nav-btn").find(x=>x.dataset.screen==="lot");if(b)b.click()}
+ if(a==="calendar"){let b=$$(".nav-btn").find(x=>x.dataset.screen==="planner");if(b)b.click()}
+}
+
+function areaManagerEligible(){return state.career.xp>=100&&state.dailyHistory.length>=10}
+window.acceptAreaRole=()=>{
+ if(!areaManagerEligible())return showModal("Area Manager","Keep building your branch performance before this role becomes available.");
+ state.areaMode=true;state.career.title="Area Manager — Northeast Indiana";state.managedBranches=["Warsaw","Columbia City","Goshen","Fort Wayne Airport","Fort Wayne Downtown"];
+ showModal("Promotion Accepted","You now oversee five Horizon branches. The Corporate screen has become your regional management view.");render()
+}
+
+function ensureCustomerProfiles(){
+ state.reservations.forEach(r=>{
+   let p=state.customerProfiles.find(x=>x.id===r.customer.id);
+   if(!p){
+     const loyalty=Math.random()<.22?"Emerald Elite":Math.random()<.45?"Horizon Rewards":"None";
+     p={id:r.customer.id,name:r.customer.name,email:r.customer.email||`${r.customer.name.toLowerCase().replace(/\s/g,".")}@example.com`,
+       phone:r.customer.phone||`(574) 555-${String(Math.floor(1000+Math.random()*8999))}`,loyalty,
+       rentals:Math.floor(Math.random()*8),lifetimeSpend:Math.floor(Math.random()*4800),complaints:[],preferences:[],
+       dnr:false,notes:[],history:[],favoriteClass:r.class,created:state.date.toISOString()};
+     if(Math.random()<.25)p.preferences.push(pick(["Prefers newer vehicles","Needs Apple CarPlay","Avoids Nissan","Likes SUVs","Usually declines protection","Prefers third-row seating"]));
+     state.customerProfiles.push(p)
+   }
+ })
+}
+ensureCustomerProfiles();
+
+function customerProfile(id){return state.customerProfiles.find(x=>x.id===id)}
+window.openCustomerProfile=id=>{
+ const p=customerProfile(id);if(!p)return;
+ const rentals=state.contracts.filter(c=>c.customerId===id);
+ showModal("Customer Profile",`<div class="agreement-paper"><h2>${p.name} ${p.dnr?'<span class="dnr-badge">DO NOT RENT</span>':p.loyalty!=="None"?`<span class="loyalty-badge">${p.loyalty}</span>`:""}</h2>
+ <div class="agreement-cols"><div class="agreement-box"><b>Contact</b><br>${p.email}<br>${p.phone}<br><br><b>Favorite Class:</b> ${p.favoriteClass}<br><b>Lifetime Spend:</b> ${money(p.lifetimeSpend)}</div>
+ <div class="agreement-box"><b>Rental History</b><br>${p.rentals+rentalCount(p.id)} total rentals<br>${p.complaints.length} complaints<br><b>Preferences:</b><br>${p.preferences.join("<br>")||"None recorded"}</div></div>
+ <h3>Notes / History</h3>${[...p.notes,...p.history].slice(-8).map(x=>`<p>${x}</p>`).join("")||"<p>No history yet.</p>"}
+ <div class="walkaround-actions"><button onclick="toggleDNR('${p.id}')">${p.dnr?"Remove DNR":"Place on Do Not Rent"}</button><button onclick="addCustomerNote('${p.id}')">Add Note</button></div></div>`)
+}
+function rentalCount(id){return state.contracts.filter(c=>c.customerId===id).length}
+window.toggleDNR=id=>{let p=customerProfile(id);if(!p)return;p.dnr=!p.dnr;if(p.dnr&&!state.dnr.includes(id))state.dnr.push(id);if(!p.dnr)state.dnr=state.dnr.filter(x=>x!==id);p.history.push(`${state.date.toLocaleDateString()}: ${p.dnr?"Placed on":"Removed from"} Do Not Rent.`);openCustomerProfile(id);render()}
+window.addCustomerNote=id=>{let p=customerProfile(id);if(!p)return;let note=prompt("Customer note:");if(note){p.notes.push(`${state.date.toLocaleDateString()}: ${note}`);openCustomerProfile(id)}}
+
+function estimateAgreement(r,v){
+ const base=r.rate*r.days, products=(r.products?.damage?24.99*r.days:0)+(r.products?.liability?14.99*r.days:0)+(r.products?.roadside?6.99*r.days:0)+(r.products?.driver?7*r.days:0)+(r.products?.seat?13*r.days:0)+(r.products?.fuel?64.99:0);
+ const subtotal=base+products, taxes=subtotal*.09, fees=6.5, total=subtotal+taxes+fees;
+ return {base,products,subtotal,taxes,fees,total,deposit:Math.max(200,Math.round(total*.35))}
+}
+window.openAgreementPreview=()=>{
+ const r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle);if(!r||!v)return showModal("Rental Agreement","Select an exact vehicle first.");
+ const p=customerProfile(r.customer.id);if(p?.dnr)return showModal("Do Not Rent Alert",`${p.name} is currently on the Do Not Rent list. Manager override is required.`);
+ const a=estimateAgreement(r,v);
+ $("#modalBody").innerHTML=`<div class="agreement-paper"><h2>HORIZON RENTAL AGREEMENT — ESTIMATE</h2>
+ <div class="agreement-cols"><div class="agreement-box"><b>Renter</b><br>${r.customer.name}<br>${p?.loyalty||"Non-member"}<br><br><b>Reservation</b> ${r.code||r.id}</div>
+ <div class="agreement-box"><b>Vehicle</b><br>Unit ${v.unit} — ${v.model}<br>${v.class}<br>Mileage ${v.miles.toLocaleString()} • Fuel ${v.fuel}/8</div></div>
+ <table class="history-table"><tr><td>Base rental (${r.days} days)</td><td>${money(a.base)}</td></tr><tr><td>Protection / options</td><td>${money(a.products)}</td></tr><tr><td>Taxes</td><td>${money(a.taxes)}</td></tr><tr><td>Fees</td><td>${money(a.fees)}</td></tr><tr><th>Estimated Total</th><th>${money(a.total)}</th></tr><tr><td>Card Authorization / Deposit</td><td>${money(a.deposit)}</td></tr></table>
+ <div class="signature-box"><b>Customer signature:</b><br><i>Pending electronic signature</i></div>
+ <div class="walkaround-actions"><button onclick="authorizePayment()">Authorize Payment</button><button class="primary" onclick="signAgreement()">Sign & Continue to Walk-Around</button></div></div>`;
+ $("#modal").showModal()
+}
+window.authorizePayment=()=>{
+ const r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle);if(!r||!v)return;
+ const a=estimateAgreement(r,v),declined=Math.random()<.08;
+ r.paymentAuthorized=!declined;r.authorizationAmount=a.deposit;
+ state.paymentEvents.unshift({date:state.date.toISOString(),customer:r.customer.name,amount:a.deposit,status:declined?"Declined":"Approved"});
+ showModal(declined?"Card Declined":"Authorization Approved",declined?`The card authorization for ${money(a.deposit)} was declined. Try another payment method.`:`Authorization approved for ${money(a.deposit)}.<br><br><button onclick="openAgreementPreview()">Return to Agreement</button>`)
+}
+window.signAgreement=()=>{
+ const r=selected();if(!r)return;
+ if(!r.paymentAuthorized)return showModal("Payment Required","Authorize the renter's payment method before signing the agreement.");
+ r.agreementSigned=true;$("#modal").close();window.assignVehicle(state.selectedVehicle)
+}
+
+function protectionConversation(r){
+ const p=customerProfile(r.customer.id),lines=[];
+ if(p?.preferences.includes("Usually declines protection"))lines.push(`"${r.customer.name}: I normally don't take the extra coverage. What exactly does it cover?"`);
+ else lines.push(`"${r.customer.name}: Can you explain what happens if the vehicle gets damaged?"`);
+ lines.push(`LDW: ${money(24.99)}/day • Supplemental Liability: ${money(14.99)}/day • Roadside: ${money(6.99)}/day`);
+ return lines.join("<br><br>")
+}
+window.deepProtection=()=>{let r=selected();if(!r)return;showModal("Protection Conversation",`${protectionConversation(r)}<div class="walkaround-actions"><button onclick="deepProtection()">Review Products</button><button onclick="declineProtection()">Customer Declines</button></div>`)}
+window.declineProtection=()=>{let r=selected();if(!r)return;r.products={damage:false,liability:false,roadside:false,fuel:false,driver:false,seat:false};r.protectionDecision="Declined";$("#modal").close();render()}
+
+function closeReturnAgreement(v){
+ const c=state.contracts.find(x=>x.vehicleId===v.id&&String(x.status).includes("Returned"));if(!c)return showModal("Return Agreement","No open returned agreement was found.");
+ const ch=c.returnCharges||{fuel:0,cleaning:0,late:0,damage:0},extras=Object.values(ch).reduce((a,n)=>a+(n||0),0);
+ c.finalTotal=(c.daily||0)*(c.days||1)+extras;c.status="Closed";c.closedAt=fmtTime(state.minute);
+ let p=customerProfile(c.customerId);if(p){p.rentals++;p.lifetimeSpend+=c.finalTotal;p.history.push(`${state.date.toLocaleDateString()}: Closed ${c.number} — ${money(c.finalTotal)}.`)}
+ v.status="Cleaning";v.keyLocation="Cleaning Bay";v.cleanRemaining=Math.floor(12+Math.random()*25);if(!state.cleaningQueue.includes(v.id))state.cleaningQueue.push(v.id);fillCleaningBays();
+ showModal("Final Receipt",`<div class="agreement-paper"><h2>${c.number} — FINAL RECEIPT</h2><p><b>${c.customer}</b> • Unit ${v.unit} ${v.model}</p>
+ <table class="history-table"><tr><td>Rental charges</td><td>${money((c.daily||0)*(c.days||1))}</td></tr><tr><td>Fuel</td><td>${money(ch.fuel||0)}</td></tr><tr><td>Cleaning</td><td>${money(ch.cleaning||0)}</td></tr><tr><td>Late / extra</td><td>${money(ch.late||0)}</td></tr><tr><td>Damage</td><td>${money(ch.damage||0)}</td></tr><tr><th>Final Total</th><th>${money(c.finalTotal)}</th></tr></table></div>`);render()
+}
+window.openReturnDesk=id=>{let v=state.fleet.find(x=>x.id===id);if(!v)return;let c=state.contracts.find(x=>x.vehicleId===v.id&&String(x.status).includes("Returned"));showModal("Return Desk",`<h2>Unit ${v.unit} — ${v.model}</h2><p>Mileage ${v.miles.toLocaleString()} • Fuel ${v.fuel}/8 • Cleanliness ${v.clean}%</p><p>${c?`Agreement ${c.number}<br>Fuel charge ${money(c.returnCharges?.fuel||0)} • Cleaning ${money(c.returnCharges?.cleaning||0)}`:"No returned agreement found."}</p><button onclick="closeReturnAgreementById('${v.id}')">Close Agreement & Print Receipt</button>`)}
+window.closeReturnAgreementById=id=>{let v=state.fleet.find(x=>x.id===id);$("#modal").close();closeReturnAgreement(v)}
+
+function vehicleFinancials(v){
+ const maintenance=(v.history||[]).filter(h=>/maintenance|repair|tire|oil/i.test(h.text)).length*120;
+ const value=Math.max(5500,(v.acquisition||30000)-(v.miles*.16)-((2026-v.year)*2200));
+ return {maintenance,value,profit:(v.revenue||0)-maintenance,roi:((v.revenue||0)/Math.max(1,v.acquisition||30000))*100}
+}
+window.vehicleProfile=(id,tab="overview")=>{
+ const v=state.fleet.find(x=>x.id===id);if(!v)return;const f=vehicleFinancials(v);
+ let body="";
+ if(tab==="overview")body=`Status ${v.status}<br>Mileage ${v.miles.toLocaleString()}<br>Fuel ${v.fuel}/8<br>Key: ${v.keyLocation}${v.status==="Returned"?`<br><br><button onclick="openReturnDesk(\'${v.id}\')">Open Return Desk</button>`:""}`;
+ if(tab==="rentals")body=(v.history||[]).filter(h=>/rental|returned|customer/i.test(h.text)).map(h=>`${h.date}: ${h.text}`).join("<br>")||"No rental history.";
+ if(tab==="damage")body=(v.damage||[]).map(d=>`${d.date}: ${d.type} — ${d.area} (${d.status})`).join("<br>")||"No damage history.";
+ if(tab==="maintenance")body=(v.history||[]).filter(h=>/maintenance|repair|fuel|service/i.test(h.text)).map(h=>`${h.date}: ${h.text}`).join("<br>")||"No maintenance history.";
+ if(tab==="financials")body=`Acquisition: ${money(v.acquisition||30000)}<br>Lifetime rental revenue: ${money(v.revenue||0)}<br>Estimated maintenance: ${money(f.maintenance)}<br>Wholesale estimate: ${money(f.value)}<br>Operating contribution: ${money(f.profit)}<br>Revenue/Acquisition: ${f.roi.toFixed(1)}%`;
+ if(tab==="ownership")body=`Model year: ${v.year}<br>Branch unit: ${v.unit}<br>Current wholesale estimate: ${money(f.value)}<br>${v.miles>55000?`<b>Fleet Disposal Candidate</b><br><button onclick="disposeVehicle('${v.id}')">Recommend Sell</button>`:"Corporate recommends keeping this unit in service."}`;
+ showModal(`Unit ${v.unit} — ${v.model}`,`<div class="vehicle-tabs">${["overview","rentals","damage","maintenance","financials","ownership"].map(t=>`<button onclick="vehicleProfile('${v.id}','${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}</div><div class="agreement-box">${body}</div>`)
+}
+window.disposeVehicle=id=>{let v=state.fleet.find(x=>x.id===id);if(!v||v.status==="Rented")return showModal("Fleet Disposal","Rented vehicles cannot be disposed.");let f=vehicleFinancials(v);state.fleetSales.push({unit:v.unit,model:v.model,value:f.value,date:state.date.toISOString()});state.fleet=state.fleet.filter(x=>x.id!==id);$("#modal").close();render()}
+
+window.employeeOffice=name=>{
+ let e=state.employees.find(x=>x.name===name);if(!e)return;
+ const issue=e.years>=3&&e.pay<22?`${e.name}: "I've been here ${e.years} years and I'd like to talk about my pay."`:`${e.name}: "I wanted to check in about how I'm doing and what I need to do to move up."`;
+ showModal("Manager Office — Employee Conversation",`<div class="office-convo">${issue}</div><p>${e.role} • ${e.years} years • ${money(e.pay)}/hr • Attendance ${e.attendance}%</p>
+ <div class="walkaround-actions"><button onclick="employeeDecision('${e.name}','raise')">Approve $1 Raise</button><button onclick="employeeDecision('${e.name}','development')">Development Plan</button><button onclick="employeeDecision('${e.name}','decline')">Decline Request</button></div>`)
+}
+window.employeeDecision=(name,decision)=>{let e=state.employees.find(x=>x.name===name);if(!e)return;if(decision==="raise"){e.pay+=1;e.history.unshift(`${state.date.toLocaleDateString()}: $1.00 raise approved.`)}if(decision==="development")e.history.unshift(`${state.date.toLocaleDateString()}: Development plan started.`);if(decision==="decline")e.history.unshift(`${state.date.toLocaleDateString()}: Pay/promotion request declined.`);$("#modal").close();render()}
+
+function careerCheck(){
+ state.career.xp+=Math.max(0,Math.round((state.satisfaction-75)/5));
+ if(state.dailyHistory.length>=5&&state.career.xp>=60){state.internalJobs.forEach(j=>j.status="Available")}
+}
+
+function plannerHours(){
+ let rows=[];
+ for(let h=7;h<=19;h++){
+   const start=h*60,end=start+59;
+   const pickups=state.reservations.filter(r=>r.pickup>=start&&r.pickup<=end);
+   const returns=state.reservations.filter(r=>{let x=expectedReturnMinute(r);return x!==null&&x>=start&&x<=end});
+   const staffing=state.employees.filter(e=>e.status==="Working" && employeeOnTask(e,h)).length;
+   const cleaningCap=Math.max(1,state.employees.filter(e=>e.status==="Working"&&["Cleaning Bay","Returns"].includes(state.staffAssignments[e.name]||e.task)).length)*2;
+   const classes=["Economy","Midsize","SUV","Minivan","Luxury"];
+   let shortages=[];
+   classes.forEach(cls=>{
+     const due=state.reservations.filter(r=>["Booked","Waiting"].includes(r.status)&&r.class===cls&&r.pickup<=end).length;
+     const avail=state.fleet.filter(v=>v.class===cls&&["Ready","Cleaning","Fueling","Returned"].includes(v.status)).length;
+     const rentedBefore=state.reservations.filter(r=>r.status==="Out"&&r.class===cls&&(expectedReturnMinute(r)||9999)>end).length;
+     const projected=avail-rentedBefore-due;
+     if(projected<0)shortages.push(`${cls} ${projected}`);
+   });
+   rows.push({h,start,pickups,returns,staffing,cleaningCap,shortages});
+ }
+ return rows
+}
+function employeeOnTask(e,h){
+ const task=state.staffAssignments[e.name]||e.task;
+ if(e.status!=="Working")return false;
+ if(h===12 && ["Counter","Cleaning Bay","Returns"].includes(task) && (e.name.charCodeAt(0)%2===0)) return false;
+ return true
+}
+window.setStaffAssignment=(name,val)=>{
+ state.staffAssignments[name]=val;
+ const e=state.employees.find(x=>x.name===name);if(e)e.task=val;
+ state.plannerNotes.unshift(`${fmtTime(state.minute)} — ${name} assigned to ${val}.`);
+ render()
+}
+function projectedShortages(){
+ const rows=plannerHours();const map={};
+ rows.forEach(row=>row.shortages.forEach(s=>{const [cls,num]=s.split(" ");map[cls]=Math.min(map[cls]??0,Number(num))}));
+ return map
+}
+window.requestPlannerTransfer=(cls)=>{
+ const branch=state.branches.find(b=>b.name!=="Warsaw" && (b[classKey(cls)]||0)>0);
+ if(!branch)return showModal("Transfer Request",`No nearby branch currently shows excess ${cls} inventory.`);
+ branch[classKey(cls)]--;state.transfers.push({id:uid(),class:cls,from:branch.name,to:"Warsaw",eta:Math.min(1080,state.minute+90),status:"En Route"});
+ state.expensesToday.transfers+=18;state.plannerNotes.unshift(`${fmtTime(state.minute)} — Requested ${cls} transfer from ${branch.name}; ETA about 90 minutes.`);
+ showModal("Transfer Requested",`${branch.name} is sending one ${cls}. Estimated arrival: ${fmtTime(Math.min(1080,state.minute+90))}.`);render()
+}
+function processTransfers(){
+ (state.transfers||[]).filter(t=>t.status==="En Route"&&t.eta<=state.minute).forEach(t=>{
+   let v=state.fleet.find(v=>v.class===t.class&&v.status==="Transfer");
+   if(!v){
+     v=makeVehicle(state.fleet.length+1);v.class=t.class;v.model=t.class==="SUV"?"Chevrolet Equinox":t.class==="Minivan"?"Chrysler Pacifica":"Toyota Camry";v.status="Ready";v.unit=String(3000+state.fleet.length);state.fleet.push(v)
+   }else{v.status="Ready"}
+   v.keyLocation="Key Cabinet";addHistory(v,`Arrived from ${t.from} branch transfer.`);t.status="Arrived";
+ })
+}
+function applyOperatingCosts(mins){
+ const working=state.employees.filter(e=>e.status==="Working");
+ const hourly=working.reduce((a,e)=>a+(e.pay||19),0);
+ const labor=(hourly/60)*mins;
+ state.laborToday+=labor;state.expensesToday.labor+=labor;
+ const cleaning=state.fleet.filter(v=>v.status==="Cleaning").length*.06*mins;
+ state.expensesToday.cleaning+=cleaning;
+}
+function autoSnapshot(reason="Auto"){
+ try{
+   const snap=JSON.stringify({...state,running:false});
+   state.autoSaves.unshift({time:new Date().toISOString(),gameDate:state.date.toISOString(),minute:state.minute,reason,data:snap});
+   state.autoSaves=state.autoSaves.slice(0,5);
+   localStorage.setItem("horizonRentalManager_autorecovery",JSON.stringify(state.autoSaves));
+ }catch(e){console.warn("Autosave skipped",e)}
+}
+window.showRecovery=()=>{
+ let snaps=state.autoSaves||[];if(!snaps.length){try{snaps=JSON.parse(localStorage.getItem("horizonRentalManager_autorecovery")||"[]")}catch(e){}}
+ if(!snaps.length)return showModal("Recovery Snapshots","No automatic recovery snapshots are available yet.");
+ showModal("Recovery Snapshots",snaps.map((s,i)=>`<p><b>${new Date(s.time).toLocaleString()}</b> — ${s.reason}<br>Game time ${fmtTime(s.minute)} <button onclick="restoreSnapshot(${i})">Restore</button></p>`).join(""))
+}
+window.restoreSnapshot=i=>{
+ const snaps=state.autoSaves||[];if(!snaps[i])return;
+ state=migrateState(JSON.parse(snaps[i].data));state.running=false;stopTimer();$("#modal").close();render()
+}
+function branchProfit(){
+ const e=state.expensesToday||{};return state.revenueToday-Object.values(e).reduce((a,n)=>a+(Number(n)||0),0)
 }
 
 function generateMorningBoard(){
@@ -451,7 +837,7 @@ window.phoneAction=i=>{
 function autonomousStaff(){
  // Agents serve simple customers occasionally, but never steal selected/current customer.
  if(state.minute%15===0){
-   let agent=state.employees.find(e=>e.status==="Working"&&e.auto&&e.role==="Rental Agent");
+   let agent=state.employees.find(e=>e.status==="Working"&&e.auto&&e.role==="Rental Agent"&&(state.staffAssignments[e.name]||e.task)==="Counter");
    let r=waiting().find(x=>x.id!==state.selectedReservation);
    if(agent&&r){
      let v=ready().find(x=>x.class===r.class);
@@ -460,7 +846,7 @@ function autonomousStaff(){
  }
  // Service agent moves returns to cleaning
  if(state.minute%10===0){
-   let svc=state.employees.find(e=>e.role==="Service Agent"&&e.status==="Working");
+   let svc=state.employees.find(e=>e.role==="Service Agent"&&e.status==="Working"&&["Returns","Cleaning Bay"].includes(state.staffAssignments[e.name]||e.task));
    let v=state.fleet.find(x=>x.status==="Returned");
    if(svc&&v){v.status="Cleaning";v.cleanRemaining=Math.floor(12+Math.random()*25);v.keyLocation="Cleaning Bay";if(!state.cleaningQueue.includes(v.id)&&!state.cleaningBays.includes(v.id))state.cleaningQueue.push(v.id);fillCleaningBays()}
  }
@@ -478,6 +864,9 @@ function operationalEvents(){
  } else if(roll<.47){
    let v=state.fleet.find(x=>x.status==="Rented");if(v)addPhone("Roadside Assistance",`Customer in Unit ${v.unit} reports a warning light and asks what to do.`,[{label:"Authorize roadside",fn:"roadside"},{label:"Arrange swap",fn:"swap"}])
  } else if(roll<.54){
+   let v=state.fleet.find(x=>x.status==="Rented");
+   if(v && Math.random()<.5){state.oneWays.push({id:uid(),vehicleId:v.id,to:"Fort Wayne Airport",status:"Expected"});state.plannerNotes.unshift(`${fmtTime(state.minute)} — One-way return reported for Unit ${v.unit}; it will not return to Warsaw today.`)}
+ } else if(roll<.62){
    state.managerInbox.unshift("Area Manager plans a branch visit this week. Review lot appearance, ready rate, sales, and customer wait times.")
  }
  // calloff
@@ -490,46 +879,160 @@ function endOfDayReport(){
  <div class="simple-card"><b>Revenue</b><h1>${money(state.revenueToday)}</h1></div>
  <div class="simple-card"><b>Satisfaction</b><h1>${state.satisfaction}%</h1></div>
  <div class="simple-card"><b>Ready for Tomorrow</b><h1>${ready().length}</h1></div>
- </div><p>${b.dirty} vehicles still cleaning • ${b.maint} maintenance • ${state.phoneQueue.length} unresolved phone calls.</p>`
+ </div><p>${b.dirty} vehicles still cleaning • ${b.maint} maintenance • ${(state.phoneQueue||[]).length} unresolved phone calls.</p>
+ <p><b>Operating costs:</b> ${money(Object.values(state.expensesToday||{}).reduce((a,n)=>a+(Number(n)||0),0))} &nbsp; <b>Branch profit:</b> ${money(branchProfit())}</p>`
 }
 
 function renderOtherScreens(){
+ try {
  $("#dashboardContent").innerHTML=`<h2>Branch Dashboard</h2><div class="card-grid"><div class="simple-card"><b>Fleet Utilization</b><h1>${utilization()}%</h1></div><div class="simple-card"><b>Customer Satisfaction</b><h1>${state.satisfaction}%</h1></div><div class="simple-card"><b>Ready Vehicles</b><h1>${ready().length}</h1></div><div class="simple-card"><b>Queue</b><h1>${waiting().length}</h1></div></div>`;
  $("#reservationContent").innerHTML=`<h2>Reservations</h2><table class="data-table"><thead><tr><th>Time</th><th>Customer</th><th>Class</th><th>Days</th><th>Status</th><th>Assigned</th></tr></thead><tbody>${state.reservations.map(r=>`<tr><td>${fmtTime(r.pickup)}</td><td>${r.customer.name}</td><td>${r.class}</td><td>${r.days}</td><td>${r.status}</td><td>${r.assignedVehicle?state.fleet.find(v=>v.id===r.assignedVehicle)?.unit:""}</td></tr>`).join("")}</tbody></table>`;
  $("#fleetContent").innerHTML=`<h2>Fleet</h2><table class="data-table"><thead><tr><th>Unit</th><th>Vehicle</th><th>Class</th><th>Miles</th><th>Fuel</th><th>Status</th></tr></thead><tbody>${state.fleet.map(v=>`<tr onclick="vehicleDetails('${v.id}')"><td>${v.unit}</td><td>${v.model}</td><td>${v.class}</td><td>${v.miles.toLocaleString()}</td><td>${v.fuel}/8</td><td>${v.status}</td></tr>`).join("")}</tbody></table>`;
- $("#employeeContent").innerHTML=`<h2>Employees</h2><div class="card-grid">${state.employees.map(e=>`<div class="simple-card"><h3>${e.name} ${e.auto?'<span class="employee-auto">AUTO</span>':''}</h3><b>${e.role}</b><p>${e.status} • ${e.task}</p><p>Sales ${e.sales}% • Service ${e.service}%</p><p>${e.years||0} years • ${money(e.pay||0)}/hr • Attendance ${e.attendance||90}%</p><small>${(e.history||[]).slice(0,3).join("<br>")}</small></div>`).join("")}</div>`;
+ $("#employeeContent").innerHTML=`<h2>Employees</h2><div class="card-grid">${state.employees.map(e=>`<div class="simple-card"><h3>${e.name} ${e.auto?'<span class="employee-auto">AUTO</span>':''}</h3><b>${e.role}</b><p>${e.status} • ${e.task}</p><p>Sales ${e.sales}% • Service ${e.service}%</p><p>${e.years||0} years • ${money(e.pay||0)}/hr • Attendance ${e.attendance||90}%</p><small>${(e.history||[]).slice(0,3).join("<br>")}</small><br><button onclick="employeeOffice(\'${e.name}\')">Meet in Office</button></div>`).join("")}</div>`;
  $("#maintenanceContent").innerHTML=`<h2>Maintenance & Turnaround</h2><div class="card-grid"><div class="simple-card"><b>Cleaning</b><h1>${state.fleet.filter(v=>v.status==="Cleaning").length}</h1></div><div class="simple-card"><b>Fueling</b><h1>${state.fleet.filter(v=>v.status==="Fueling").length}</h1></div><div class="simple-card"><b>Maintenance</b><h1>${state.fleet.filter(v=>v.status==="Maintenance").length}</h1></div><div class="simple-card"><b>Return Lane</b><h1>${state.fleet.filter(v=>v.status==="Returned").length}</h1></div></div>`;
- $("#reportsContent").innerHTML=`<h2>Reports</h2><div class="card-grid"><div class="simple-card"><b>Revenue Today</b><h1>${money(state.revenueToday)}</h1></div><div class="simple-card"><b>Labor Today</b><h1>${money(state.laborToday)}</h1></div><div class="simple-card"><b>Rental Agreements</b><h1>${state.contracts.length}</h1></div><div class="simple-card"><b>Satisfaction</b><h1>${state.satisfaction}%</h1></div></div>`;
+ $("#reportsContent").innerHTML=`<h2>Reports & Profitability</h2>
+ <div class="finance-grid">
+ <div class="simple-card"><b>Revenue</b><h1>${money(state.revenueToday)}</h1></div>
+ <div class="simple-card"><b>Operating Costs</b><h1>${money(Object.values(state.expensesToday||{}).reduce((a,n)=>a+(Number(n)||0),0))}</h1></div>
+ <div class="simple-card"><b>Branch Profit</b><h1>${money(branchProfit())}</h1></div>
+ <div class="simple-card"><b>Utilization</b><h1>${utilization()}%</h1></div>
+ </div>
+ <h3>Today's Cost Breakdown</h3>
+ <table class="data-table"><tbody>${Object.entries(state.expensesToday||{}).map(([k,v])=>`<tr><td>${k[0].toUpperCase()+k.slice(1)}</td><td>${money(v)}</td></tr>`).join("")}</tbody></table>
+ <h3>Recent Daily History</h3><table class="data-table"><thead><tr><th>Date</th><th>Rentals</th><th>Revenue</th><th>Profit</th><th>Sat.</th><th>Util.</th></tr></thead>
+ <tbody>${(state.dailyHistory||[]).slice(0,14).map(d=>`<tr><td>${new Date(d.date).toLocaleDateString()}</td><td>${d.rentals}</td><td>${money(d.revenue)}</td><td>${money(d.profit)}</td><td>${d.satisfaction}%</td><td>${d.utilization}%</td></tr>`).join("")||"<tr><td colspan='6'>Complete a day to build history.</td></tr>"}</tbody></table>`;
+ 
+
+ const waitingVisitor=state.managerVisitors.find(x=>x.status==="Waiting");
+ $("#officeContent").innerHTML=`<h2>Branch Manager Office</h2>${waitingVisitor?`<div class="knock"><b>Knock at the door — ${waitingVisitor.employee}</b><br>${waitingVisitor.reason}<br><button onclick="handleVisitor('${waitingVisitor.id}')">Talk to Employee</button></div>`:""}
+ <div class="office-room">
+ <div class="office-object" onclick="officeAction('computer')"><h3>🖥 Manager Computer</h3>Daily planner, staffing, reports and fleet forecast.</div>
+ <div class="office-object" onclick="officeAction('phone')"><h3>☎ Office Phone</h3>${state.phoneQueue.length} calls waiting. Roadside, branches and customers.</div>
+ <div class="office-object" onclick="officeAction('inbox')"><h3>▤ Inbox</h3>${state.managerInbox.length} messages and corporate notices.</div>
+ <div class="office-object" onclick="officeAction('whiteboard')"><h3>□ Morning Whiteboard</h3>Today's fleet plan, shortages and priorities.</div>
+ <div class="office-object" onclick="officeAction('window')"><h3>▦ Office Window</h3>Look directly onto the physical parking lot.</div>
+ <div class="office-object" onclick="officeAction('calendar')"><h3>◷ Calendar</h3>Future reservations, returns and staffing.</div></div>
+ <h3>Roadside / Active Events</h3>${state.roadsideCases.filter(x=>x.status==="Open").map(c=>{let v=state.fleet.find(x=>x.id===c.vehicleId);return `<div class="event-card roadside-card"><b>Roadside — Unit ${v?.unit||"?"}</b><br>${c.problem} • ${c.distance} miles away <button onclick="openRoadside('${c.id}')">Handle</button></div>`}).join("")||"<p>No open roadside cases.</p>"}
+ ${state.rareEvents.filter(x=>x.status==="Active").map(e=>`<div class="event-card"><b>${e.type}</b><br>${e.text}<br><button onclick="resolveRareEvent('${e.id}')">Acknowledge</button></div>`).join("")}`;
+ syncParking();
+ $("#lotContent").innerHTML=`<h2>Physical Branch Lot</h2><p>Every in-branch vehicle now occupies a real space. Click a vehicle for its profile or an empty space to move a vehicle.</p>
+ <div class="lot-map">${state.parkingSpaces.map(s=>{let v=s.vehicleId?state.fleet.find(x=>x.id===s.vehicleId):null;return `<div class="parking-space ${s.zone.toLowerCase()} ${v?"":"empty"}" onclick="openParkingSpace('${s.id}')"><div class="space-label">${s.id} • ${s.zone}</div>${v?`<div class="vehicle-mini">🚗 ${v.unit}<br>${v.model}<br>${v.status}</div>`:"EMPTY"}</div>`}).join("")}</div>
+ <h3>New Fleet Intake</h3>${state.fleetDeliveries.filter(d=>d.status==="Awaiting Intake").map(d=>`<div class="payment-card"><b>Unit ${d.unit}</b> — ${d.model} <button onclick="intakeFleet('${d.id}')">Inspect / Plate / Fuel / Stage</button></div>`).join("")||"<p>No transporter deliveries waiting.</p>"}`;
+ ensureCustomerProfiles();
+ $("#customersContent").innerHTML=`<h2>Customer CRM</h2><div class="customer-grid">${state.customerProfiles.map(p=>`<div class="customer-card ${p.loyalty==="Emerald Elite"?"vip":""}">
+ <h3>${p.name} ${p.dnr?'<span class="dnr-badge">DNR</span>':p.loyalty!=="None"?`<span class="loyalty-badge">${p.loyalty}</span>`:""}</h3>
+ <p>${p.favoriteClass} • ${p.rentals+rentalCount(p.id)} rentals<br>${money(p.lifetimeSpend)} lifetime spend</p>
+ <p>${p.preferences.join(" • ")||"No saved preferences"}</p><button onclick="openCustomerProfile('${p.id}')">Open Profile</button></div>`).join("")}</div>`;
+ $("#agreementsContent").innerHTML=`<h2>Rental Agreements</h2><table class="history-table"><thead><tr><th>Agreement</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Daily</th><th>Payment</th></tr></thead><tbody>
+ ${state.contracts.map(c=>`<tr><td>${c.number}</td><td>${c.customer}</td><td>${c.vehicle}</td><td>${c.status}</td><td>${money(c.daily||0)}</td><td>${c.status==="Closed"?"Finalized":"Authorized"}</td></tr>`).join("")||"<tr><td colspan='6'>No agreements yet.</td></tr>"}</tbody></table>
+ <h3>Recent Payment Activity</h3>${state.paymentEvents.slice(0,10).map(p=>`<div class="payment-card"><b>${p.customer}</b> — ${money(p.amount)} — ${p.status}</div>`).join("")||"<p>No payment activity yet.</p>"}`;
+
+  const prow=plannerHours(), ps=projectedShortages();
+ $("#plannerContent").innerHTML=`<h2>Daily Planner — ${state.date.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</h2>
+ <div class="planner-top">
+  <div class="planner-kpi"><span>Pickups Today</span><b>${state.reservations.length}</b></div>
+  <div class="planner-kpi"><span>Projected Shortages</span><b>${Object.keys(ps).length}</b></div>
+  <div class="planner-kpi"><span>Cleaning Capacity</span><b>${state.employees.filter(e=>e.status==="Working"&&(state.staffAssignments[e.name]||e.task)==="Cleaning Bay").length*2}/hr</b></div>
+  <div class="planner-kpi"><span>Projected Profit</span><b>${money(branchProfit())}</b></div>
+ </div>
+ <div class="forecast-strip">${["Economy","Midsize","SUV","Minivan","Luxury"].map(c=>{let n=ps[c]||0;return `<div class="forecast-box ${n<0?"bad":"good"}"><b>${c}</b><br>${n<0?`Short ${Math.abs(n)}`:"Covered"} ${n<0?`<br><button onclick="requestPlannerTransfer('${c}')">Request Transfer</button>`:""}</div>`}).join("")}</div>
+ <h3>Hourly Operations Timeline</h3>
+ <div class="timeline"><div class="timeline-head"><div>Time</div><div>Pickups</div><div>Returns</div><div>Staff / Cleaning</div><div>Forecast</div></div>
+ ${prow.map(row=>`<div class="timeline-row ${row.shortages.length?"shortage":state.minute>=row.start&&state.minute<row.start+60?"now":""}">
+ <div><b>${fmtTime(row.start)}</b></div>
+ <div>${row.pickups.length?row.pickups.map(r=>`<span class="pill">${r.customer.name}<br>${r.class}</span>`).join(""):"—"}</div>
+ <div>${row.returns.length?row.returns.map(r=>`<span class="pill green">${r.customer.name}<br>${r.class}</span>`).join(""):"—"}</div>
+ <div>${row.staffing} working<br>${row.cleaningCap} clean/hr</div>
+ <div>${row.shortages.length?row.shortages.map(s=>`<span class="pill red">${s}</span>`).join(""):`<span class="pill green">Covered</span>`}</div>
+ </div>`).join("")}</div>
+ <h3>Staff Assignment Board</h3><div class="staff-board">${state.employees.map(e=>`<div class="staff-card"><b>${e.name}</b><br>${e.role} • ${e.status}
+ <select onchange="setStaffAssignment('${e.name.replace(/'/g,"\\'")}',this.value)">
+ ${["Counter","Returns","Cleaning Bay","Fueling/Transfers","Pickup/Delivery","Maintenance Runner","Manager Office"].map(t=>`<option ${((state.staffAssignments[e.name]||e.task)===t)?"selected":""}>${t}</option>`).join("")}
+ </select></div>`).join("")}</div>
+ <p><button onclick="showRecovery()">Recovery Snapshots</button></p>`;
+
  $("#operationsContent").innerHTML=`<h2>Live Branch Operations</h2><div class="ops-grid">
- <div class="ops-card"><h3>📞 Manager Phone</h3><div class="big">${state.phoneQueue.length}</div><p>calls waiting</p><button onclick="answerPhone()">Answer Next Call</button></div>
- <div class="ops-card"><h3>🚫 Do Not Rent</h3><div class="big">${state.dnr.length}</div><p>customers on branch risk list</p></div>
- <div class="ops-card"><h3>⏰ Overdue</h3><div class="big">${state.overdue.length}</div><p>active overdue rentals</p></div>
- <div class="ops-card"><h3>🏢 Accounts</h3>${state.accounts.map(a=>`<p><b>${a.name}</b><br>${a.type} • Relationship ${a.relationship}% • ${a.rentals} rentals</p>`).join("")}</div>
+ <div class="ops-card"><h3>📞 Manager Phone</h3><div class="big">${(state.phoneQueue||[]).length}</div><p>calls waiting</p><button onclick="answerPhone()">Answer Next Call</button></div>
+ <div class="ops-card"><h3>🚫 Do Not Rent</h3><div class="big">${(state.dnr||[]).length}</div><p>customers on branch risk list</p></div>
+ <div class="ops-card"><h3>⏰ Overdue</h3><div class="big">${(state.overdue||[]).length}</div><p>active overdue rentals</p></div>
+ <div class="ops-card"><h3>🏢 Accounts</h3>${(state.accounts||[]).map(a=>`<p><b>${a.name}</b><br>${a.type} • Relationship ${a.relationship}% • ${a.rentals} rentals</p>`).join("")}</div>
  <div class="ops-card"><h3>🔑 Key Control</h3>${["Key Cabinet","Customer","Cleaning Bay","Maintenance","Manager/Customer"].map(k=>`<p>${k}: <b>${state.fleet.filter(v=>(v.keyLocation||"Key Cabinet")===k).length}</b></p>`).join("")}</div>
- <div class="ops-card"><h3>Other Branches</h3>${state.branches.map(b=>`<p><b>${b.name}</b> ${b.distance?b.distance+" mi":""}<br>SUV ${b.suv} • Minivan ${b.minivan} • Economy ${b.economy}</p>`).join("")}</div>
+ <div class="ops-card"><h3>Other Branches</h3><p>Branch relationships affect how willing managers are to help with fleet.</p>${(state.branches||[]).map(b=>`<p><b>${b.name}</b> ${b.distance?b.distance+" mi":""}<br>SUV ${b.suv} • Minivan ${b.minivan} • Economy ${b.economy}</p>`).join("")}</div>
  </div>`;
- $("#corporateContent").innerHTML=`<h2>Corporate Scorecard</h2><div class="card-grid"><div class="simple-card"><b>Utilization Target</b><h1>78%</h1><p>Current ${utilization()}%</p></div><div class="simple-card"><b>Customer Satisfaction</b><h1>90%</h1><p>Current ${state.satisfaction}%</p></div><div class="simple-card"><b>Branch Status</b><h1>${state.branchStatus}</h1></div><div class="simple-card"><b>Career</b><h1>${state.career.title}</h1><p>XP ${state.career.xp} • Next: ${state.career.next}</p></div></div>`;
+ $("#corporateContent").innerHTML=`<h2>Corporate Scorecard</h2><div class="card-grid"><div class="simple-card"><b>Utilization Target</b><h1>78%</h1><p>Current ${utilization()}%</p></div><div class="simple-card"><b>Customer Satisfaction</b><h1>90%</h1><p>Current ${state.satisfaction}%</p></div><div class="simple-card"><b>Branch Status</b><h1>${state.branchStatus}</h1></div><div class="simple-card"><b>Career</b><h1>${(state.career||{title:"Branch Manager"}).title}</h1><p>XP ${(state.career||{xp:0}).xp} • Next: ${(state.career||{next:"Area Manager"}).next}</p>${state.internalJobs.map(j=>`<p><b>${j.title}</b><br>Fleet ${j.fleet} • ${j.employees} employees • ${money(j.annualRevenue)} annual revenue<br><span class="pill ${j.status==="Available"?"green":"orange"}">${j.status}</span></p>`).join("")}</div></div>`;
+ if(state.areaMode) $("#corporateContent").innerHTML+=`<h2>Northeast Indiana Region</h2><div class="branch-network">${state.managedBranches.map((name,i)=>`<div class="branch-node"><h3>${name}</h3><p>Branch Manager: ${state.branchRelationships[name]?.manager||"Assigned Manager"}<br>Fleet: ${Math.floor(55+Math.random()*130)}<br>Satisfaction: ${Math.floor(76+Math.random()*20)}%<br>Relationship: ${state.branchRelationships[name]?.score||65}/100</p><button onclick="callBranch('${name}')">Call Branch Manager</button></div>`).join("")}</div>`;
+ else if(areaManagerEligible()) $("#corporateContent").innerHTML+=`<div class="simple-card"><h3>Promotion Opportunity</h3><b>Area Manager — Northeast Indiana</b><p>Warsaw • Columbia City • Goshen • Fort Wayne Airport • Fort Wayne Downtown</p><button onclick="acceptAreaRole()">Accept Promotion</button></div>`;
+ } catch(err) {
+   console.error("Secondary screen render error:",err);
+   const ops=$("#operationsContent");
+   if(ops) ops.innerHTML=`<h2>Live Branch Operations</h2><div class="ops-card"><h3>Operations Recovery</h3><p>The game repaired missing data from an older save. Reload this screen once. If this message remains, start a new v0.6.2 game.</p><pre>${String(err.message||err)}</pre></div>`;
+ }
+
 }
 function showModal(title,body){$("#modalBody").innerHTML=`<h2>${title}</h2><div>${body}</div>`;$("#modal").showModal()}
 $$(".nav-btn").forEach(b=>b.onclick=()=>{$$(".nav-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");$$(".screen").forEach(s=>s.classList.remove("active"));$("#screen-"+b.dataset.screen).classList.add("active")});
 $$(".facility-tab").forEach(b=>b.onclick=()=>{$$(".facility-tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");let zone=b.dataset.zone;if(zone==="cleaning")showModal("Cleaning Bay",`${state.fleet.filter(v=>v.status==="Cleaning").length} vehicles are currently in cleaning. Cars wait in queue until one of six numbered bays is available.`);if(zone==="walkaround")openWalkaround();if(zone==="office")showModal("Manager Office","Phone calls, inbox items, employee issues, reports, and escalations are handled here.")});
 
+function stopTimer(){
+ timerToken++;
+ if(timer){clearTimeout(timer);timer=null}
+ if(timerCountdown){clearInterval(timerCountdown);timerCountdown=null}
+ nextTickAt=0;
+ updateTimerStatus()
+}
+function speedConfig(){
+ return {
+   slow:{minutes:1,ms:60000,label:"Slow"},
+   normal:{minutes:1,ms:30000,label:"Normal"},
+   fast:{minutes:1,ms:10000,label:"Fast"}
+ }[state.simSpeed]||{minutes:1,ms:60000,label:"Slow"}
+}
+function updateTimerStatus(){
+ const el=$("#timerStatus");if(!el)return;
+ if(!state.running){el.textContent="PAUSED — game clock is not advancing";return}
+ const s=speedConfig();
+ const remain=Math.max(0,Math.ceil((nextTickAt-Date.now())/1000));
+ el.textContent=`${s.label}: next game minute in ${remain}s`;
+}
+function scheduleNextTick(token){
+ if(!state.running||token!==timerToken)return;
+ const s=speedConfig();
+ nextTickAt=Date.now()+s.ms;
+ updateTimerStatus();
+ timer=setTimeout(()=>{
+   if(!state.running||token!==timerToken)return;
+   tick(s.minutes);
+   scheduleNextTick(token);
+ },s.ms)
+}
 function startTimer(){
- if(timer){clearInterval(timer);timer=null}
- const speeds={slow:{minutes:1,ms:60000},normal:{minutes:1,ms:30000},fast:{minutes:1,ms:10000}};
- const s=speeds[state.simSpeed]||speeds.normal;
- timer=setInterval(()=>tick(s.minutes),s.ms)
+ stopTimer();
+ state.running=true;
+ const token=++timerToken;
+ scheduleNextTick(token);
+ timerCountdown=setInterval(updateTimerStatus,1000)
 }
 
 $("#morningBoardBtn").onclick=showMorningBoard;
-$("#playBtn").onclick=()=>{state.running=!state.running;if(state.running&&!timer)startTimer();else if(!state.running&&timer){clearInterval(timer);timer=null}render()};
+$("#playBtn").onclick=()=>{
+ if(state.running){state.running=false;stopTimer()}
+ else{startTimer()}
+ render()
+};
 $("#advance5Btn").onclick=()=>tick(5);
 $("#advance15Btn").onclick=()=>tick(15);
-$("#speedSelect").value=state.simSpeed||"normal";
-$("#speedSelect").onchange=()=>{state.simSpeed=$("#speedSelect").value;if(state.running)startTimer()};
-$("#nextDayBtn").onclick=nextDay;
+$("#speedSelect").value=state.simSpeed||"slow";
+$("#speedSelect").onchange=()=>{state.simSpeed=$("#speedSelect").value;if(state.running)startTimer();else updateTimerStatus()};
+$("#nextDayBtn").onclick=()=>{state.running=false;stopTimer();nextDay()};
 $("#saveBtn").onclick=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify({...state,date:state.date.toISOString()}));showModal("Game Saved","Your branch was saved in this browser.")};
-$("#loadBtn").onclick=()=>{let raw=localStorage.getItem(SAVE_KEY);if(!raw)return showModal("Load Game","No v0.4.0 save was found.");state=JSON.parse(raw);state.date=new Date(state.date);state.running=false;if(timer){clearInterval(timer);timer=null}render();showModal("Game Loaded","Your branch save has been restored.")};
+$("#loadBtn").onclick=()=>{let raw=localStorage.getItem(SAVE_KEY)
+ ||localStorage.getItem("horizonRentalManager_v061")
+ ||localStorage.getItem("horizonRentalManager_v060")
+ ||localStorage.getItem("horizonRentalManager_v051")
+ ||localStorage.getItem("horizonRentalManager_v050")
+ ||localStorage.getItem("horizonRentalManager_v041")
+ ||localStorage.getItem("horizonRentalManager_v040");
+ if(!raw)return showModal("Load Game","No compatible Horizon Rental Manager save was found.");state=migrateState(JSON.parse(raw));state.running=false;stopTimer();render();showModal("Game Loaded","Your branch save has been upgraded and restored for v0.6.2.")};
 $("#confirmAssignmentBtn").onclick=()=>{if(state.selectedVehicle)assignVehicle(state.selectedVehicle)};
 $("#viewInventoryBtn").onclick=()=>{$$(".nav-btn").find(b=>b.dataset.screen==="fleet").click()};
 $("#officePhone").onclick=answerPhone;
@@ -538,5 +1041,6 @@ $("#officeStaff").onclick=()=>{$$(".nav-btn").find(b=>b.dataset.screen==="employ
 $("#officeReports").onclick=()=>{$$(".nav-btn").find(b=>b.dataset.screen==="reports").click()};
 $("#editCustomerBtn").onclick=()=>showModal("Edit Rental","Customer profile and reservation modification controls will live here.");
 ["damage","liability","roadside","fuel","driver","seat"].forEach(k=>{let el=$("#product"+k[0].toUpperCase()+k.slice(1));el.onchange=()=>{let r=selected();if(r)gatherProducts(r)}})
-window.addEventListener("keydown",e=>{if(e.code==="Space"&&!["INPUT","BUTTON"].includes(document.activeElement.tagName)){e.preventDefault();$("#playBtn").click()}if(e.key.toLowerCase()==="d")tick(15)});
+window.addEventListener("keydown",e=>{if(e.code==="Space"&&!["INPUT","BUTTON"].includes(document.activeElement.tagName)){e.preventDefault();$("#playBtn").click()}if(e.key.toLowerCase()==="d")tick(15);
+ if(e.key.toLowerCase()==="p"){let b=$$(".nav-btn").find(x=>x.dataset.screen==="planner");if(b)b.click()}});
 render();

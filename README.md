@@ -1,8 +1,8 @@
-# Horizon Rental Manager v0.6.0
+# Horizon Rental Manager v0.9.0
 
 This version redesigns the actual game around a national rental-car branch workflow.
 
-## Major v0.6.0 changes
+## Major v0.9.0 changes
 - Main gameplay screen now resembles a real rental branch operating dashboard.
 - Customer queue on the left with wait time and next-hour arrivals.
 - Selected customer physically appears at the desk with changing dialogue.
@@ -31,7 +31,7 @@ Replace the existing files in your `rental` repository with:
 Then commit the changes. GitHub Pages will update automatically.
 
 
-## v0.6.0 stability fixes
+## v0.9.0 stability fixes
 - Simulation time is dramatically slower.
 - Normal speed is 1 game minute every 2.5 real seconds.
 - Slow speed is 1 game minute every 5 real seconds.
@@ -48,7 +48,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Vehicle availability is rechecked when the rental is finalized.
 
 
-## v0.6.0 — Required customer walk-around
+## v0.9.0 — Required customer walk-around
 - Assigning a vehicle no longer means the customer immediately drives away.
 - The rental agreement is created first, then the exact vehicle moves to `Walk-Around`.
 - A customer walk-around is required before the car becomes `Rented`.
@@ -62,7 +62,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Return processing now compares return condition to the checkout walk-around.
 - New return damage is permanently added to that exact vehicle's history and marked as return damage.
 
-## v0.6.0 — Time speed correction
+## v0.9.0 — Time speed correction
 - The day now starts on Slow speed.
 - Slow: 1 game minute every 60 real seconds.
 - Normal: 1 game minute every 30 real seconds.
@@ -70,7 +70,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Manual +5 and +15 minute buttons remain available when you want to move ahead quickly.
 
 
-## v0.6.0 — Living branch operations expansion
+## v0.9.0 — Living branch operations expansion
 - Autonomous rental agents can serve customers while you manage the branch.
 - Service staff move returned cars into the cleaning workflow.
 - Live manager phone calls: rental extensions, insurance replacement rentals, body-shop referrals, roadside calls, and inter-branch transfer requests.
@@ -87,3 +87,64 @@ Then commit the changes. GitHub Pages will update automatically.
 - Area-manager visit messages.
 - Career progression foundation.
 - Existing damage/walk-around history remains permanently tied to each vehicle.
+
+## v0.9.0 — Clock engine fix
+- Replaced the repeating interval clock with a single self-scheduling timeout.
+- A timer token prevents old/duplicate clock loops from continuing in the background.
+- Slow is now exactly one game minute after 60 real seconds.
+- Changing speed cancels the old timer before starting the new one.
+- Pausing, loading, and advancing to the next day all hard-stop the timer.
+- Added a visible countdown showing exactly how many real seconds remain until the next game minute.
+- Added cache-busting version strings to app.js and style.css so GitHub Pages does not keep serving an older, faster JavaScript file.
+
+## v0.9.0 — Operations screen repair
+- Fixed the blank Operations page caused by older saves missing v0.6 fields.
+- Added a save migration layer that fills in phone queue, DNR, overdue, accounts, branches, career, employee history, vehicle key data, and other newer state automatically.
+- Older v0.4–v0.6.1 browser saves can now be loaded and upgraded.
+- Operations rendering is now defensive so one missing field cannot blank the whole page.
+- Updated cache-busting to v0.9.0.
+
+## v0.9.0 — Daily operations simulation
+- New Daily Planner screen with an hourly 7 AM–7 PM timeline.
+- Pickups, projected returns, staffing, cleaning capacity, and projected class shortages are visible by hour.
+- One-click inter-branch transfer requests from shortage cards.
+- Transfers now have ETAs and arrive later instead of appearing instantly.
+- Staff Assignment Board: Counter, Returns, Cleaning Bay, Fueling/Transfers, Pickup/Delivery, Maintenance Runner, Manager Office.
+- Autonomous staff behavior now respects the jobs you assign them.
+- Labor and cleaning costs accrue as the day runs; fueling, maintenance, and transfers have costs.
+- Reports now show operating costs, branch profit, and multi-day history.
+- Preventive maintenance can remove a Ready vehicle when service becomes due.
+- Return agreements can generate fuel and heavy-clean charges.
+- One-way rental events can remove a vehicle from the expected Warsaw return pool.
+- Automatic recovery snapshots every 30 game minutes plus manual/end-of-day snapshots.
+- Recovery screen allows restoring one of the latest snapshots.
+- Keyboard shortcut P opens the Daily Planner.
+
+## v0.9.0 — Deep customers, agreements, vehicles, and employees
+- New persistent Customer CRM with loyalty, rental count, lifetime spend, preferences, complaints, notes, and DNR status.
+- Customer preferences can affect satisfaction and vehicle-assignment outcomes.
+- Protection is now presented as a customer conversation rather than only checkboxes.
+- New formal rental agreement preview with renter, exact vehicle, base rental, protection/options, taxes, fees, estimated total, and card authorization/deposit.
+- Payment authorization can approve or decline; agreement must be signed before the required vehicle walk-around.
+- New Agreements screen with agreement and payment activity.
+- Return Desk and final receipt with fuel, cleaning, late/extra, and damage charge fields.
+- Vehicle profiles now have Overview, Rental History, Damage, Maintenance, Financials, and Ownership tabs.
+- Vehicle financials include acquisition, lifetime rental revenue, estimated maintenance, wholesale value, and operating contribution.
+- High-mileage vehicles can become disposal candidates and be sold from the fleet.
+- Employee cards now allow real manager-office conversations about pay and development.
+- Raises and development decisions become part of permanent employee history.
+- Career XP now grows with daily performance and can unlock internal management opportunities.
+- Calendar-year rollover increases employee tenure and depreciates fleet value.
+
+## v0.9.0 — Physical branch & living-world update
+- New Manager Office screen with clickable computer, phone, inbox, whiteboard, window, and calendar.
+- Employees can knock on the manager's door with customer, scheduling, pay, and vehicle problems.
+- New physical Parking Lot with numbered Ready, Return, Cleaning, Maintenance, and Overflow spaces.
+- In-branch vehicles occupy actual spaces and can be manually moved.
+- Roadside assistance cases can require roadside dispatch, replacement vehicles, or towing.
+- Rare operational events include recalls, severe-weather extensions, card outages, major corporate requests, and transporter deliveries.
+- New fleet deliveries require intake before entering rental service.
+- Other Horizon branch managers now have persistent relationship scores that influence cooperation.
+- Career can progress into Area Manager — Northeast Indiana.
+- Area Manager mode oversees Warsaw, Columbia City, Goshen, Fort Wayne Airport, and Fort Wayne Downtown.
+- The world layer is connected to the existing planner, fleet, employees, financials, customer CRM, agreements, cleaning, maintenance, and recovery systems.

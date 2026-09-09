@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horizon Rental Manager v0.6.0</title>
-<link rel="stylesheet" href="style.css">
+<title>Horizon Rental Manager v0.9.0</title>
+<link rel="stylesheet" href="style.css?v=0.9.0">
 </head>
 <body>
 <div id="app">
@@ -24,6 +24,11 @@
       <button class="nav-btn" data-screen="employees">♟<span>Employees</span></button>
       <button class="nav-btn" data-screen="maintenance">⚒<span>Maintenance</span></button>
       <button class="nav-btn" data-screen="reports">▤<span>Reports</span></button>
+      <button class="nav-btn" data-screen="office">▣<span>Manager Office</span></button>
+      <button class="nav-btn" data-screen="lot">▦<span>Parking Lot</span></button>
+      <button class="nav-btn" data-screen="customers">♙<span>Customers</span></button>
+      <button class="nav-btn" data-screen="agreements">▤<span>Agreements</span></button>
+      <button class="nav-btn" data-screen="planner">◷<span>Daily Planner</span></button>
       <button class="nav-btn" data-screen="operations">☏<span>Operations</span></button>
       <button class="nav-btn" data-screen="corporate">▥<span>Corporate</span></button>
     </nav>
@@ -40,7 +45,7 @@
   <section class="timebar">
     <div>
       <div class="clock-label">Branch Time</div>
-      <div id="topTime" class="top-time">9:14 AM</div>
+      <div id="topTime" class="top-time">9:14 AM</div><div id="timerStatus" class="clock-label">PAUSED</div>
     </div>
     <div class="time-actions">
       <button id="playBtn" class="primary">▶ Run</button>
@@ -55,7 +60,7 @@
       <button id="saveBtn">Save</button>
       <button id="loadBtn">Load</button>
     </div>
-    <button id="morningBoardBtn">Morning Board</button><div class="version">v0.6.0</div>
+    <button id="morningBoardBtn">Morning Board</button><div class="version">v0.9.0</div>
   </section>
 
   <main>
@@ -178,12 +183,17 @@
     <section id="screen-employees" class="screen"><div class="simple-screen" id="employeeContent"></div></section>
     <section id="screen-maintenance" class="screen"><div class="simple-screen" id="maintenanceContent"></div></section>
     <section id="screen-reports" class="screen"><div class="simple-screen" id="reportsContent"></div></section>
+    <section id="screen-office" class="screen"><div class="simple-screen" id="officeContent"></div></section>
+    <section id="screen-lot" class="screen"><div class="simple-screen" id="lotContent"></div></section>
+    <section id="screen-customers" class="screen"><div class="simple-screen" id="customersContent"></div></section>
+    <section id="screen-agreements" class="screen"><div class="simple-screen" id="agreementsContent"></div></section>
+    <section id="screen-planner" class="screen"><div class="simple-screen" id="plannerContent"></div></section>
     <section id="screen-operations" class="screen"><div class="simple-screen" id="operationsContent"></div></section>
     <section id="screen-corporate" class="screen"><div class="simple-screen" id="corporateContent"></div></section>
   </main>
 </div>
 
 <dialog id="modal"><div id="modalBody"></div><form method="dialog"><button>Close</button></form></dialog>
-<script src="app.js"></script>
+<script src="app.js?v=0.9.0"></script>
 </body>
 </html>
