@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horizon Rental Manager v0.5.0</title>
+<title>Horizon Rental Manager v0.6.0</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -24,6 +24,7 @@
       <button class="nav-btn" data-screen="employees">♟<span>Employees</span></button>
       <button class="nav-btn" data-screen="maintenance">⚒<span>Maintenance</span></button>
       <button class="nav-btn" data-screen="reports">▤<span>Reports</span></button>
+      <button class="nav-btn" data-screen="operations">☏<span>Operations</span></button>
       <button class="nav-btn" data-screen="corporate">▥<span>Corporate</span></button>
     </nav>
     <div class="header-info">
@@ -44,9 +45,9 @@
     <div class="time-actions">
       <button id="playBtn" class="primary">▶ Run</button>
       <select id="speedSelect" title="Simulation speed">
-        <option value="slow">Slow</option>
-        <option value="normal" selected>Normal</option>
-        <option value="fast">Fast</option>
+        <option value="slow" selected>Slow (1 min / 60 sec)</option>
+        <option value="normal">Normal (1 min / 30 sec)</option>
+        <option value="fast">Fast (1 min / 10 sec)</option>
       </select>
       <button id="advance5Btn">+5 Min</button>
       <button id="advance15Btn">+15 Min</button>
@@ -54,7 +55,7 @@
       <button id="saveBtn">Save</button>
       <button id="loadBtn">Load</button>
     </div>
-    <div class="version">v0.5.0</div>
+    <button id="morningBoardBtn">Morning Board</button><div class="version">v0.6.0</div>
   </section>
 
   <main>
@@ -177,6 +178,7 @@
     <section id="screen-employees" class="screen"><div class="simple-screen" id="employeeContent"></div></section>
     <section id="screen-maintenance" class="screen"><div class="simple-screen" id="maintenanceContent"></div></section>
     <section id="screen-reports" class="screen"><div class="simple-screen" id="reportsContent"></div></section>
+    <section id="screen-operations" class="screen"><div class="simple-screen" id="operationsContent"></div></section>
     <section id="screen-corporate" class="screen"><div class="simple-screen" id="corporateContent"></div></section>
   </main>
 </div>

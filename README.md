@@ -1,8 +1,8 @@
-# Horizon Rental Manager v0.5.0
+# Horizon Rental Manager v0.6.0
 
 This version redesigns the actual game around a national rental-car branch workflow.
 
-## Major v0.5.0 changes
+## Major v0.6.0 changes
 - Main gameplay screen now resembles a real rental branch operating dashboard.
 - Customer queue on the left with wait time and next-hour arrivals.
 - Selected customer physically appears at the desk with changing dialogue.
@@ -31,7 +31,7 @@ Replace the existing files in your `rental` repository with:
 Then commit the changes. GitHub Pages will update automatically.
 
 
-## v0.5.0 stability fixes
+## v0.6.0 stability fixes
 - Simulation time is dramatically slower.
 - Normal speed is 1 game minute every 2.5 real seconds.
 - Slow speed is 1 game minute every 5 real seconds.
@@ -48,7 +48,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Vehicle availability is rechecked when the rental is finalized.
 
 
-## v0.5.0 — Required customer walk-around
+## v0.6.0 — Required customer walk-around
 - Assigning a vehicle no longer means the customer immediately drives away.
 - The rental agreement is created first, then the exact vehicle moves to `Walk-Around`.
 - A customer walk-around is required before the car becomes `Rented`.
@@ -61,3 +61,29 @@ Then commit the changes. GitHub Pages will update automatically.
 - The rental can be cancelled during walk-around and the vehicle returns to Ready.
 - Return processing now compares return condition to the checkout walk-around.
 - New return damage is permanently added to that exact vehicle's history and marked as return damage.
+
+## v0.6.0 — Time speed correction
+- The day now starts on Slow speed.
+- Slow: 1 game minute every 60 real seconds.
+- Normal: 1 game minute every 30 real seconds.
+- Fast: 1 game minute every 10 real seconds.
+- Manual +5 and +15 minute buttons remain available when you want to move ahead quickly.
+
+
+## v0.6.0 — Living branch operations expansion
+- Autonomous rental agents can serve customers while you manage the branch.
+- Service staff move returned cars into the cleaning workflow.
+- Live manager phone calls: rental extensions, insurance replacement rentals, body-shop referrals, roadside calls, and inter-branch transfer requests.
+- Rental extensions can change fleet availability and revenue.
+- Corporate, insurance, and body-shop account relationships.
+- Other branches now have their own excess vehicle counts.
+- Inter-branch transfer decisions.
+- Employee years of service, pay, attendance, performance history, and call-offs.
+- Key-control location tracked for every fleet unit.
+- Preventive maintenance mileage and recall status added to vehicle records.
+- Morning Fleet Meeting / whiteboard with reservations, returns, shortages, cleaning, maintenance, staffing, and fleet-balancing information.
+- End-of-day close report.
+- Operations screen for phone queue, DNR, overdue rentals, accounts, keys, and other branches.
+- Area-manager visit messages.
+- Career progression foundation.
+- Existing damage/walk-around history remains permanently tied to each vehicle.
