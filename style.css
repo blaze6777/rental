@@ -31,3 +31,35 @@ linear-gradient(90deg,#51606422 1px,transparent 1px),linear-gradient(#51606422 1
 .simple-screen{background:#f3f6f8;color:#17232b;border-radius:5px;padding:18px;min-height:700px}.simple-screen h2{margin-top:0}.data-table{width:100%;border-collapse:collapse}.data-table th,.data-table td{padding:8px;border-bottom:1px solid #d5dde1;text-align:left;font-size:12px}.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.simple-card{border:1px solid #cbd5da;border-radius:6px;padding:12px;background:white}
 dialog{width:min(760px,95vw);border:1px solid #60717b;border-radius:7px;padding:0;background:#f7f9fa;color:#17232b}dialog::backdrop{background:#0009}#modalBody{padding:17px}dialog form{padding:12px;text-align:right;border-top:1px solid #ccd5da}
 @media(max-width:1350px){.counter-grid{grid-template-columns:270px 1fr 360px}.assign-panel{grid-column:2/4}.facility-map{grid-template-columns:repeat(3,1fr)}.bottom-kpis{grid-template-columns:repeat(4,1fr)}.main-nav .nav-btn{min-width:70px}.header-info{display:none}}
+
+#speedSelect{background:#fff;color:#17232b;border:1px solid #aeb8bf;border-radius:5px;padding:8px}
+.selected-vehicle-bar{margin:6px 7px;padding:8px;border:1px solid #cbd5da;border-radius:5px;background:#eef2f4;font-size:11px;color:#26343d}
+.selected-vehicle-bar.ready{background:#ddf8ea;border-color:#49b989;color:#075f3c;font-weight:700}
+.confirm-assignment:disabled{opacity:.45;cursor:not-allowed}
+.vehicle-option.selected-vehicle{outline:3px solid #0aa565;background:#eafff4}
+.action-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.action-modal-grid button{padding:12px;border:1px solid #b7c2c8;background:#fff;border-radius:5px;cursor:pointer;text-align:left}
+.action-modal-grid button:hover{border-color:#0a9b5e;background:#eefbf5}
+.protection-choice{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #d6dde1;padding:9px 0}
+.protection-choice label{display:flex;gap:8px;align-items:center}
+.assignment-summary{background:#eef7f2;border:1px solid #9ed8bd;border-radius:6px;padding:10px;margin-top:10px}
+
+.walkaround-shell{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+.walkaround-car{background:#e9eef1;border:1px solid #c6d0d6;border-radius:8px;padding:14px}
+.walkaround-diagram{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
+.wa-area{min-height:82px;border:2px solid #b9c5cb;border-radius:8px;background:#fff;padding:10px;cursor:pointer;text-align:left}
+.wa-area.existing{border-color:#e5a92e;background:#fff8e7}
+.wa-area.newdamage{border-color:#df4a43;background:#fff0ef}
+.wa-area.clear{border-color:#29a66c;background:#effbf5}
+.wa-area strong{display:block;margin-bottom:5px}
+.walkaround-summary{background:#142129;color:white;border-radius:8px;padding:14px}
+.walkaround-summary h3{margin-top:0}
+.damage-list{margin-top:10px}
+.damage-chip{display:block;border-radius:5px;padding:7px 9px;margin-bottom:6px;background:#2b3a43}
+.damage-chip.existing{border-left:4px solid #e5a92e}
+.damage-chip.new{border-left:4px solid #df4a43}
+.walkaround-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.walkaround-actions button{padding:10px 12px;border-radius:5px;border:1px solid #aeb8bf;cursor:pointer}
+.walkaround-actions .primary{background:#07965b;color:white;border-color:#07965b}
+.walkaround-actions .danger{background:#7f2626;color:white;border-color:#7f2626}
+.pending-wa{display:inline-block;background:#d9801f;color:white;padding:3px 7px;border-radius:999px;font-size:10px;margin-left:6px}

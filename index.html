@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horizon Rental Manager v0.4.0</title>
+<title>Horizon Rental Manager v0.5.0</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -43,12 +43,18 @@
     </div>
     <div class="time-actions">
       <button id="playBtn" class="primary">▶ Run</button>
+      <select id="speedSelect" title="Simulation speed">
+        <option value="slow">Slow</option>
+        <option value="normal" selected>Normal</option>
+        <option value="fast">Fast</option>
+      </select>
+      <button id="advance5Btn">+5 Min</button>
       <button id="advance15Btn">+15 Min</button>
       <button id="nextDayBtn">Next Day</button>
       <button id="saveBtn">Save</button>
       <button id="loadBtn">Load</button>
     </div>
-    <div class="version">v0.4.0</div>
+    <div class="version">v0.5.0</div>
   </section>
 
   <main>
@@ -103,6 +109,8 @@
             <button class="mini-tab" data-filter="all">All Vehicles</button>
           </div>
           <div id="assignVehicles" class="assign-list"></div>
+          <div id="selectedVehicleBar" class="selected-vehicle-bar">No vehicle selected.</div>
+          <button id="confirmAssignmentBtn" class="wide confirm-assignment" disabled>Assign & Complete Rental</button>
           <button id="viewInventoryBtn" class="wide">View Full Inventory</button>
         </section>
       </div>
@@ -113,6 +121,7 @@
         <button class="facility-tab" data-zone="cleaning">Cleaning Bay</button>
         <button class="facility-tab" data-zone="fueling">Fueling</button>
         <button class="facility-tab" data-zone="maintenance">Maintenance</button>
+        <button class="facility-tab" data-zone="walkaround">Walk-Around</button>
         <button class="facility-tab" data-zone="office">Manager Office</button>
       </div>
 

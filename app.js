@@ -1,5 +1,5 @@
 
-const SAVE_KEY="horizonRentalManager_v040";
+const SAVE_KEY="horizonRentalManager_v050";
 const CLASSES=["Economy","Midsize","Full Size","SUV","Premium SUV","Minivan","Pickup"];
 const MODELS=[
 ["Chevrolet Equinox","SUV"],["Nissan Rogue","SUV"],["Ford Explorer","Premium SUV"],["Toyota Highlander","SUV"],
@@ -26,7 +26,7 @@ function makeVehicle(i){
  const statuses=i<13?"Ready":i<17?"Rented":i<19?"Returned":i<23?"Cleaning":i<24?"Fueling":i<26?"Maintenance":"Ready";
  return{id:uid(),unit,model,class:cls,year:2026-(i%2),miles:Math.floor(4200+Math.random()*42000),fuel:Math.floor(5+Math.random()*4),
  clean:Math.floor(75+Math.random()*26),status:statuses,history:[{date:"Sep 8, 2026",text:"Active fleet unit at Warsaw Branch."}],
- damage:[],cleanRemaining:statuses==="Cleaning"?Math.floor(8+Math.random()*42):0,assignedRental:null,revenue:Math.floor(3000+Math.random()*12000)}
+ damage:[],condition:{front:[],rear:[],driver:[],passenger:[],glass:[],wheels:[],roof:[],interior:[]},cleanRemaining:statuses==="Cleaning"?Math.floor(8+Math.random()*42):0,assignedRental:null,revenue:Math.floor(3000+Math.random()*12000)}
 }
 function makeReservation(i){
  let c=makeCustomer(i), pickup=540+i*15;
@@ -37,8 +37,8 @@ function makeReservation(i){
 function newState(){
  let fleet=Array.from({length:28},(_,i)=>makeVehicle(i));
  return{
-  version:"0.4.0",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
-  fleet,reservations:Array.from({length:15},(_,i)=>makeReservation(i)),selectedReservation:null,
+  version:"0.5.0",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
+  fleet,reservations:Array.from({length:15},(_,i)=>makeReservation(i)),selectedReservation:null,selectedVehicle:null,pendingWalkaround:null,simSpeed:"normal",
   cleaningBays:[null,null,null,null,null,null],cleaningQueue:[],events:[],contracts:[],returnsToday:7,rentalsToday:18,
   satisfaction:92,revenueToday:4820,laborToday:1140,branchStatus:"Running Smoothly",managerInbox:[],
   employees:[
@@ -68,7 +68,7 @@ state.selectedReservation=waiting()[0]?.id||state.reservations[0].id;
 function render(){
  $("#topDate").textContent=state.date.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric",year:"numeric"});
  $("#topTime").textContent=fmtTime(state.minute);$("#weatherText").textContent=state.weather;
- $("#playBtn").textContent=state.running?"⏸ Pause":"▶ Run";
+ $("#playBtn").textContent=state.running?"⏸ Pause":"▶ Run"; if($("#speedSelect"))$("#speedSelect").value=state.simSpeed||"normal";
  renderQueue();renderCustomer();renderAssign();renderFacility();renderKpis();renderOtherScreens()
 }
 function renderQueue(){
@@ -95,12 +95,12 @@ function renderCustomer(){
  <div><b>Type:</b> ${r.customer.type}</div><div><b>Vehicle Class:</b> ${r.class}</div>
  <div><b>Rate:</b> $${r.rate.toFixed(2)}/day</div><div><b>Status:</b> ${r.status}</div></div></div></div>`;
  const btns=[
- ["Confirm reservation",()=>advanceConversation(r.id)],
- ["Offer an upgrade",()=>{vehicleFilter="upgrades";renderAssign();advanceConversation(r.id)}],
- ["Discuss protection",()=>{$("#productDamage").focus();advanceConversation(r.id)}],
- ["Check ID / Payment",()=>showModal("ID & Payment",`${r.customer.name}'s license and payment authorization verified. Deposit hold: $200.`)],
- ["Modify reservation",()=>showModal("Modify Reservation","Modify dates, class, return location, or rate plan from this desk screen.")],
- ["Other options",()=>showModal("Other Options","Add additional driver, child seat, roadside coverage, fuel plan, notes, or manager override.")],
+ ["Confirm reservation",()=>confirmReservation(r.id)],
+ ["Offer an upgrade",()=>offerUpgrade(r.id)],
+ ["Discuss protection",()=>openProtection(r.id)],
+ ["Check ID / Payment",()=>checkIdPayment(r.id)],
+ ["Modify reservation",()=>modifyReservation(r.id)],
+ ["Other options",()=>openOtherOptions(r.id)],
  ];
  $("#conversationButtons").innerHTML=btns.map((b,i)=>`<button onclick="counterAction(${i})">${b[0]}</button>`).join("");
  window._counterFns=btns.map(b=>b[1]);
@@ -110,7 +110,75 @@ function renderCustomer(){
 }
 window.counterAction=i=>window._counterFns[i]();
 window.advanceConversation=id=>{let r=state.reservations.find(x=>x.id===id);r.conversation=(r.conversation||0)+1;renderCustomer()}
-window.selectReservation=id=>{state.selectedReservation=id;render()}
+window.selectReservation=id=>{if(state.pendingWalkaround)return openWalkaround();state.selectedReservation=id;state.selectedVehicle=null;vehicleFilter="available";render()}
+
+window.confirmReservation=id=>{
+ const r=state.reservations.find(x=>x.id===id);if(!r)return;
+ r.conversation=Math.max(r.conversation||0,1);
+ showModal("Reservation Confirmed",`<p><b>${r.customer.name}</b></p><p>${r.class} • ${r.days} day(s) • ${money(r.rate)}/day</p><p>The reservation details are confirmed. Next, discuss protection or select a vehicle.</p>`);
+ renderCustomer()
+}
+window.offerUpgrade=id=>{
+ const r=state.reservations.find(x=>x.id===id);if(!r)return;
+ vehicleFilter="upgrades";
+ $$(".mini-tab").forEach(x=>x.classList.toggle("active",x.dataset.filter==="upgrades"));
+ r.conversation=Math.max(r.conversation||0,2);
+ renderAssign();renderCustomer();
+ showModal("Upgrade Options",`<p>${r.customer.name} reserved a <b>${r.class}</b>.</p><p>The vehicle list now shows available vehicles in other classes. Select one to offer an upgrade.</p>`)
+}
+window.openProtection=id=>{
+ const r=state.reservations.find(x=>x.id===id);if(!r)return;
+ const p=r.products;
+ $("#modalBody").innerHTML=`<h2>Protection & Optional Products</h2>
+ <p>Review choices with ${r.customer.name}. Changes made here are saved to this rental.</p>
+ <div class="protection-choice"><label><input type="checkbox" id="mDamage" ${p.damage?"checked":""}> Damage Waiver (LDW)</label><b>$24.99/day</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mLiability" ${p.liability?"checked":""}> Supplemental Liability</label><b>$14.99/day</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mRoadside" ${p.roadside?"checked":""}> Roadside Assistance</label><b>$6.99/day</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mFuel" ${p.fuel?"checked":""}> Prepaid Fuel</label><b>$64.99</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mDriver" ${p.driver?"checked":""}> Additional Driver</label><b>$7.00/day</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mSeat" ${p.seat?"checked":""}> Child Seat</label><b>$13.00/day</b></div>
+ <div class="action-row" style="margin-top:12px"><button id="saveProtectionBtn">Save Choices</button><button id="declineProtectionBtn">Decline All Protection</button></div>`;
+ $("#modal").showModal();
+ setTimeout(()=>{
+   $("#saveProtectionBtn").onclick=()=>{
+     r.products.damage=$("#mDamage").checked;r.products.liability=$("#mLiability").checked;r.products.roadside=$("#mRoadside").checked;
+     r.products.fuel=$("#mFuel").checked;r.products.driver=$("#mDriver").checked;r.products.seat=$("#mSeat").checked;
+     r.conversation=Math.max(r.conversation||0,2);$("#modal").close();render()
+   };
+   $("#declineProtectionBtn").onclick=()=>{
+     Object.keys(r.products).forEach(k=>r.products[k]=false);
+     r.conversation=Math.max(r.conversation||0,2);$("#modal").close();render()
+   }
+ },0)
+}
+window.checkIdPayment=id=>{
+ const r=state.reservations.find(x=>x.id===id);if(!r)return;
+ r.idVerified=true;r.paymentVerified=true;
+ showModal("ID & Payment Verified",`<p><b>${r.customer.name}</b></p><p>✓ Driver's license verified</p><p>✓ Payment authorization approved</p><p>✓ $200 deposit hold authorized</p>`);
+ render()
+}
+window.modifyReservation=id=>{
+ const r=state.reservations.find(x=>x.id===id);if(!r)return;
+ $("#modalBody").innerHTML=`<h2>Modify Reservation</h2>
+ <label>Vehicle Class<br><select id="modClass">${CLASSES.map(c=>`<option ${c===r.class?"selected":""}>${c}</option>`).join("")}</select></label><br><br>
+ <label>Rental Days<br><input id="modDays" type="number" min="1" max="30" value="${r.days}"></label><br><br>
+ <label>Daily Rate<br><input id="modRate" type="number" min="1" step=".01" value="${r.rate}"></label><br><br>
+ <button id="saveModifyBtn">Save Changes</button>`;
+ $("#modal").showModal();
+ setTimeout(()=>{$("#saveModifyBtn").onclick=()=>{r.class=$("#modClass").value;r.days=+$("#modDays").value;r.rate=+$("#modRate").value;state.selectedVehicle=null;$("#modal").close();render()}},0)
+}
+window.openOtherOptions=id=>{
+ const r=state.reservations.find(x=>x.id===id);if(!r)return;
+ $("#modalBody").innerHTML=`<h2>Other Rental Options</h2><div class="action-modal-grid">
+ <button onclick="quickOption('seat')"><b>Child Seat</b><br>Add/remove child seat</button>
+ <button onclick="quickOption('driver')"><b>Additional Driver</b><br>Add/remove driver</button>
+ <button onclick="quickOption('fuel')"><b>Prepaid Fuel</b><br>Add/remove fuel plan</button>
+ <button onclick="quickOption('roadside')"><b>Roadside</b><br>Add/remove roadside</button>
+ </div>`;
+ $("#modal").showModal()
+}
+window.quickOption=k=>{let r=selected();if(!r)return;r.products[k]=!r.products[k];$("#modal").close();render()}
+
 function renderAssign(){
  const r=selected();if(!r)return;
  let vehicles=state.fleet;
@@ -119,27 +187,149 @@ function renderAssign(){
  if(vehicleFilter==="all")vehicles=vehicles.filter(v=>v.status==="Ready");
  if(vehicleFilter==="available"&&!vehicles.length)vehicles=state.fleet.filter(v=>v.status==="Ready");
  $("#availableCount").textContent=`(${state.fleet.filter(v=>v.status==="Ready").length})`;
- $("#assignVehicles").innerHTML=vehicles.slice(0,10).map((v,i)=>`<div class="vehicle-option ${i===0?"best":""}">
+ $("#assignVehicles").innerHTML=vehicles.slice(0,12).map((v,i)=>`<div class="vehicle-option ${state.selectedVehicle===v.id?"selected-vehicle":""}">
  <div class="car-thumb"><div class="car-shape"></div><div class="wheel a"></div><div class="wheel b"></div></div>
  <div><div class="v-name">${v.class} - ${v.model}</div><div class="v-meta">Unit ${v.unit}<br>${v.miles.toLocaleString()} mi | ${v.fuel}/8 | ${v.clean>=90?"Clean":"Needs touch-up"}</div></div>
- <button class="assign-btn" onclick="assignVehicle('${v.id}')">Assign</button></div>`).join("")||`<div class="vehicle-option"><div></div><div class="v-meta">No matching ready vehicles. Check upgrades or full inventory.</div></div>`;
+ <button class="assign-btn" onclick="selectVehicle('${v.id}')">${state.selectedVehicle===v.id?"Selected":"Select"}</button></div>`).join("")||`<div class="vehicle-option"><div></div><div class="v-meta">No matching ready vehicles. Check upgrades or full inventory.</div></div>`;
+ const sv=state.fleet.find(v=>v.id===state.selectedVehicle);
+ const bar=$("#selectedVehicleBar"),confirm=$("#confirmAssignmentBtn");
+ if(sv&&sv.status==="Ready"){
+   bar.className="selected-vehicle-bar ready";bar.textContent=`Selected: Unit ${sv.unit} — ${sv.model} (${sv.class})`;
+   confirm.disabled=false
+ }else{
+   state.selectedVehicle=null;bar.className="selected-vehicle-bar";bar.textContent="No vehicle selected.";confirm.disabled=true
+ }
 }
 $$(".mini-tab").forEach(b=>b.onclick=()=>{$$(".mini-tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");vehicleFilter=b.dataset.filter;renderAssign()});
 function gatherProducts(r){
  r.products.damage=$("#productDamage").checked;r.products.liability=$("#productLiability").checked;r.products.roadside=$("#productRoadside").checked;
  r.products.fuel=$("#productFuel").checked;r.products.driver=$("#productDriver").checked;r.products.seat=$("#productSeat").checked
 }
+window.selectVehicle=id=>{
+ const v=state.fleet.find(x=>x.id===id);if(!v||v.status!=="Ready")return showModal("Vehicle Unavailable","That vehicle is no longer Ready.");
+ state.selectedVehicle=id;renderAssign()
+}
 window.assignVehicle=id=>{
  const r=selected(),v=state.fleet.find(x=>x.id===id);if(!r||!v)return;
- gatherProducts(r);r.assignedVehicle=v.id;r.status="Out";v.status="Rented";v.assignedRental=r.id;
+ if(v.status!=="Ready")return showModal("Vehicle Unavailable","That vehicle is no longer available. Please select another.");
+ gatherProducts(r);
+ if(!r.idVerified||!r.paymentVerified){
+   return showModal("Complete ID & Payment First","Use the <b>Check ID / Payment</b> button before completing the rental.")
+ }
+ r.assignedVehicle=v.id;
  let extras=(r.products.damage?24.99:0)+(r.products.liability?14.99:0)+(r.products.roadside?6.99:0)+(r.products.driver?7:0)+(r.products.seat?13:0)+(r.products.fuel?64.99/r.days:0);
  let daily=r.rate+extras;state.revenueToday+=daily;state.rentalsToday++;
- let contract={id:uid(),number:`RA-${260900+state.contracts.length+1}`,customer:r.customer.name,vehicle:v.unit,checkout:fmtTime(state.minute),days:r.days,daily,products:{...r.products},status:"Open"};
- state.contracts.unshift(contract);addHistory(v,`Assigned to ${r.customer.name} on ${contract.number}; checkout ${v.miles.toLocaleString()} miles, ${v.fuel}/8 fuel.`);
- state.selectedReservation=waiting()[0]?.id||state.reservations.find(x=>x.status==="Booked")?.id||null;
- showModal("Rental Complete",`${r.customer.name} is leaving in Unit ${v.unit}, a ${v.model}. Agreement ${contract.number}. Daily total: ${money(daily)}.`);
- render()
+ let contract={id:uid(),number:`RA-${260900+state.contracts.length+1}`,customer:r.customer.name,customerId:r.customer.id,vehicle:v.unit,vehicleId:v.id,
+ checkout:fmtTime(state.minute),days:r.days,daily,products:{...r.products},status:"Pending Walk-Around",walkaround:null};
+ state.contracts.unshift(contract);
+ startWalkaround(r,v,contract)
 }
+
+const WALK_AREAS=[
+ ["front","Front / Bumper"],["rear","Rear / Bumper"],["driver","Driver Side"],["passenger","Passenger Side"],
+ ["glass","Windshield / Glass"],["wheels","Wheels / Tires"],["roof","Roof"],["interior","Interior"]
+];
+function startWalkaround(r,v,contract){
+ state.pendingWalkaround={
+   reservationId:r.id,vehicleId:v.id,contractId:contract.id,
+   checkoutMileage:v.miles,checkoutFuel:v.fuel,
+   acknowledgedExisting:[],newDamage:[],startedAt:fmtTime(state.minute)
+ };
+ r.status="Walk-Around";
+ v.status="Walk-Around";
+ addHistory(v,`Rental agreement ${contract.number} created for ${r.customer.name}; vehicle moved to customer walk-around before release.`);
+ render();
+ openWalkaround()
+}
+function getOpenDamageForArea(v,area){
+ return (v.damage||[]).filter(d=>d.status!=="Repaired"&&d.area===area)
+}
+window.openWalkaround=()=>{
+ const p=state.pendingWalkaround;if(!p)return showModal("Walk-Around","No rental is currently waiting for a walk-around.");
+ const r=state.reservations.find(x=>x.id===p.reservationId),v=state.fleet.find(x=>x.id===p.vehicleId),c=state.contracts.find(x=>x.id===p.contractId);
+ const areaHtml=WALK_AREAS.map(([key,label])=>{
+   const existing=getOpenDamageForArea(v,key);
+   const newd=p.newDamage.filter(d=>d.area===key);
+   let cls=newd.length?"newdamage":existing.length?"existing":"clear";
+   let line=newd.length?`${newd.length} newly noted`:existing.length?`${existing.length} existing item(s)`:"No damage noted";
+   return `<button class="wa-area ${cls}" onclick="walkaroundArea('${key}')"><strong>${label}</strong><span>${line}</span></button>`
+ }).join("");
+ const existingAll=(v.damage||[]).filter(d=>d.status!=="Repaired");
+ $("#modalBody").innerHTML=`<h2>Customer Vehicle Walk-Around</h2>
+ <div class="walkaround-shell">
+ <div class="walkaround-car">
+   <h3>Unit ${v.unit} — ${v.model}</h3>
+   <div class="info-grid"><div><b>Customer:</b> ${r.customer.name}</div><div><b>Agreement:</b> ${c.number}</div>
+   <div><b>Mileage Out:</b> ${p.checkoutMileage.toLocaleString()}</div><div><b>Fuel Out:</b> ${p.checkoutFuel}/8</div></div>
+   <p>Walk around the vehicle with the customer. Click any area to document condition or confirm existing damage.</p>
+   <div class="walkaround-diagram">${areaHtml}</div>
+ </div>
+ <div class="walkaround-summary">
+   <h3>Condition Record</h3>
+   <div><b>Existing damage:</b> ${existingAll.length}</div>
+   <div><b>Newly documented before release:</b> ${p.newDamage.length}</div>
+   <div class="damage-list">
+     ${existingAll.length?existingAll.map(d=>`<span class="damage-chip existing">Existing: ${d.type} — ${WALK_AREAS.find(a=>a[0]===d.area)?.[1]||d.area}</span>`).join(""):"<span class='damage-chip'>No existing damage on file.</span>"}
+     ${p.newDamage.map(d=>`<span class="damage-chip new">Newly documented: ${d.type} — ${WALK_AREAS.find(a=>a[0]===d.area)?.[1]||d.area}</span>`).join("")}
+   </div>
+   <div class="walkaround-actions">
+     <button onclick="acknowledgeExisting()">Acknowledge Existing Damage</button>
+     <button class="primary" onclick="completeWalkaround()">Complete Walk-Around & Release Vehicle</button>
+     <button class="danger" onclick="cancelWalkaround()">Cancel Rental</button>
+   </div>
+ </div></div>`;
+ $("#modal").showModal()
+}
+window.walkaroundArea=area=>{
+ const p=state.pendingWalkaround;if(!p)return;
+ const v=state.fleet.find(x=>x.id===p.vehicleId);
+ const existing=getOpenDamageForArea(v,area);
+ $("#modalBody").innerHTML=`<h2>${WALK_AREAS.find(a=>a[0]===area)?.[1]}</h2>
+ <p>${existing.length?`There ${existing.length===1?"is":"are"} ${existing.length} existing damage item(s) already on this vehicle.`:"No existing damage is recorded in this area."}</p>
+ ${existing.map(d=>`<div class="damage-chip existing">${d.type} — documented ${d.date||"previously"}</div>`).join("")}
+ <h3>Document condition before customer leaves</h3>
+ <div class="action-modal-grid">
+ <button onclick="addWalkDamage('${area}','Scratch')"><b>Scratch</b><br>Paint/body scratch</button>
+ <button onclick="addWalkDamage('${area}','Dent')"><b>Dent</b><br>Dent or ding</button>
+ <button onclick="addWalkDamage('${area}','Chip/Crack')"><b>Chip / Crack</b><br>Glass, paint, or trim damage</button>
+ <button onclick="addWalkDamage('${area}','Scuff')"><b>Scuff</b><br>Surface scuff or wheel rash</button>
+ <button onclick="addWalkDamage('${area}','Stain')"><b>Stain / Interior Mark</b><br>Interior condition issue</button>
+ <button onclick="openWalkaround()"><b>No New Damage</b><br>Return to walk-around</button>
+ </div>`;
+}
+window.addWalkDamage=(area,type)=>{
+ const p=state.pendingWalkaround;if(!p)return;
+ const v=state.fleet.find(x=>x.id===p.vehicleId);
+ const d={id:uid(),area,type,severity:"Pre-rental documented",date:state.date.toLocaleDateString(),status:"Existing",source:"Checkout walk-around"};
+ v.damage.push(d);p.newDamage.push(d);
+ addHistory(v,`CHECKOUT WALK-AROUND: ${type} documented at ${area} before customer release.`);
+ openWalkaround()
+}
+window.acknowledgeExisting=()=>{
+ const p=state.pendingWalkaround;if(!p)return;
+ const v=state.fleet.find(x=>x.id===p.vehicleId);
+ p.acknowledgedExisting=(v.damage||[]).filter(d=>d.status!=="Repaired").map(d=>d.id);
+ showModal("Existing Damage Acknowledged",`All currently documented damage on Unit ${v.unit} has been acknowledged on this rental's checkout condition record.<br><br><button onclick="openWalkaround()">Return to Walk-Around</button>`)
+}
+window.completeWalkaround=()=>{
+ const p=state.pendingWalkaround;if(!p)return;
+ const r=state.reservations.find(x=>x.id===p.reservationId),v=state.fleet.find(x=>x.id===p.vehicleId),c=state.contracts.find(x=>x.id===p.contractId);
+ c.walkaround={completed:true,checkoutMileage:p.checkoutMileage,checkoutFuel:p.checkoutFuel,existingDamageIds:(v.damage||[]).filter(d=>d.status!=="Repaired").map(d=>d.id),completedAt:fmtTime(state.minute)};
+ c.status="Open";r.status="Out";v.status="Rented";v.assignedRental=r.id;
+ addHistory(v,`Customer walk-around completed with ${r.customer.name}. Vehicle released on ${c.number}.`);
+ state.pendingWalkaround=null;state.selectedVehicle=null;
+ state.selectedReservation=waiting()[0]?.id||state.reservations.find(x=>x.status==="Booked")?.id||null;
+ $("#modal").close();render();
+ showModal("Vehicle Released",`${r.customer.name} has completed the walk-around and is leaving in Unit ${v.unit}.`)
+}
+window.cancelWalkaround=()=>{
+ const p=state.pendingWalkaround;if(!p)return;
+ const r=state.reservations.find(x=>x.id===p.reservationId),v=state.fleet.find(x=>x.id===p.vehicleId),c=state.contracts.find(x=>x.id===p.contractId);
+ r.status="Waiting";r.assignedVehicle=null;v.status="Ready";v.assignedRental=null;c.status="Cancelled";
+ addHistory(v,`Rental ${c.number} cancelled before vehicle release during walk-around.`);
+ state.pendingWalkaround=null;state.selectedVehicle=null;$("#modal").close();render()
+}
+
 function renderFacility(){
  $("#readyCount").textContent=`(${state.fleet.filter(v=>v.status==="Ready").length})`;
  $("#returnCount").textContent=`(${state.fleet.filter(v=>v.status==="Returned").length})`;
@@ -147,14 +337,14 @@ function renderFacility(){
  $("#fuelCount").textContent=`(${state.fleet.filter(v=>v.status==="Fueling").length})`;
  $("#maintCount").textContent=`(${state.fleet.filter(v=>v.status==="Maintenance").length})`;
  $("#readyRow").innerHTML=state.fleet.filter(v=>v.status==="Ready").slice(0,20).map(v=>lotCar(v)).join("");
- $("#returnLane").innerHTML=state.fleet.filter(v=>v.status==="Returned").map(v=>lotCar(v,true)).join("");
+ $("#returnLane").innerHTML=state.fleet.filter(v=>["Returned","Walk-Around"].includes(v.status)).map(v=>lotCar(v,true)).join("");
  $("#fuelZone").innerHTML=state.fleet.filter(v=>v.status==="Fueling").map(v=>lotCar(v,true)).join("");
  $("#maintenanceZone").innerHTML=state.fleet.filter(v=>v.status==="Maintenance").map(v=>lotCar(v,true)).join("");
  $("#cleaningBays").innerHTML=state.cleaningBays.map((id,i)=>{let v=state.fleet.find(x=>x.id===id);return `<div class="clean-bay"><strong>Bay ${i+1}</strong>${v?`Unit ${v.unit}<br>${v.model}<div class="timer">${Math.max(0,v.cleanRemaining)} min</div>`:"Available"}</div>`}).join("");
  $("#cleaningQueue").innerHTML=state.cleaningQueue.map(id=>{let v=state.fleet.find(x=>x.id===id);return `<span class="queue-chip">Queued: ${v?.unit||"?"}</span>`}).join("")
 }
 function lotCar(v,tall=false){return `<div class="lot-car" onclick="vehicleDetails('${v.id}')"><span>${v.unit}</span></div>`}
-window.vehicleDetails=id=>{let v=state.fleet.find(x=>x.id===id);showModal(`Unit ${v.unit} — ${v.model}`,`<b>Status:</b> ${v.status}<br><b>Class:</b> ${v.class}<br><b>Mileage:</b> ${v.miles.toLocaleString()}<br><b>Fuel:</b> ${v.fuel}/8<br><b>Cleanliness:</b> ${v.clean}%<br><br><b>History</b><br>${v.history.map(h=>`${h.date}: ${h.text}`).join("<br>")}`)}
+window.vehicleDetails=id=>{let v=state.fleet.find(x=>x.id===id);showModal(`Unit ${v.unit} — ${v.model}`,`<b>Status:</b> ${v.status}<br><b>Class:</b> ${v.class}<br><b>Mileage:</b> ${v.miles.toLocaleString()}<br><b>Fuel:</b> ${v.fuel}/8<br><b>Cleanliness:</b> ${v.clean}%<br><br><b>Damage History</b><br>${(v.damage||[]).length?(v.damage||[]).map(d=>`${d.date}: ${d.type} — ${WALK_AREAS.find(a=>a[0]===d.area)?.[1]||d.area} (${d.status})`).join("<br>"):"No damage history"}<br><br><b>Vehicle History</b><br>${v.history.map(h=>`${h.date}: ${h.text}`).join("<br>")}`)}
 function renderKpis(){
  const u=utilization();$("#carsOnLot").textContent=state.fleet.filter(v=>v.status!=="Rented").length;$("#lotBreakdown").textContent=`${ready().length} Ready • ${state.fleet.filter(v=>v.status==="Cleaning").length} Cleaning • ${state.fleet.filter(v=>v.status==="Maintenance").length} Maintenance`;
  $("#todaysRentals").textContent=state.rentalsToday;$("#rentalsBreakdown").textContent=`${state.contracts.filter(c=>c.status==="Open").length} currently out`;
@@ -175,7 +365,25 @@ function tick(mins=5){
  // fueling progress random
  if(state.minute%20<mins){let f=state.fleet.find(v=>v.status==="Fueling");if(f){f.fuel=8;f.status="Ready";addHistory(f,"Fueling completed; moved to Ready Row.")}}
  // random return
- if(state.minute%45<mins&&Math.random()<.6){let r=state.reservations.find(x=>x.status==="Out");if(r){let v=state.fleet.find(x=>x.id===r.assignedVehicle);if(v){r.status="Returned";v.status="Returned";v.miles+=Math.floor(50+Math.random()*260);v.fuel=Math.max(1,Math.floor(2+Math.random()*6));v.clean=Math.floor(45+Math.random()*40);state.returnsToday++;addHistory(v,`Returned from ${r.customer.name}: ${v.miles.toLocaleString()} miles, ${v.fuel}/8 fuel.`)}}}
+ if(state.minute%45<mins&&Math.random()<.6){
+ let r=state.reservations.find(x=>x.status==="Out");
+ if(r){
+   let v=state.fleet.find(x=>x.id===r.assignedVehicle);
+   if(v){
+     r.status="Returned";v.status="Returned";v.miles+=Math.floor(50+Math.random()*260);v.fuel=Math.max(1,Math.floor(2+Math.random()*6));v.clean=Math.floor(45+Math.random()*40);state.returnsToday++;
+     let c=state.contracts.find(x=>x.vehicleId===v.id&&x.status==="Open");
+     if(c){c.returnMileage=v.miles;c.returnFuel=v.fuel;c.status="Returned - Inspection Pending"}
+     if(Math.random()<.20){
+       const [area,label]=pick(WALK_AREAS),type=pick(["Scratch","Dent","Chip/Crack","Scuff"]);
+       const d={id:uid(),area,type,severity:"Return damage",date:state.date.toLocaleDateString(),status:"New Return Damage",source:"Return inspection"};
+       v.damage.push(d);
+       addHistory(v,`RETURN DAMAGE: ${type} found at ${label}; not present on checkout condition record.`);
+       if(c)c.returnDamageIds=[...(c.returnDamageIds||[]),d.id]
+     }
+     addHistory(v,`Returned from ${r.customer.name}: ${v.miles.toLocaleString()} miles, ${v.fuel}/8 fuel. Return condition compared with checkout walk-around.`);
+   }
+ }
+}
  // auto inspect a returned car every 20 min
  if(state.minute%20<mins){let v=state.fleet.find(x=>x.status==="Returned");if(v){v.status="Cleaning";v.cleanRemaining=Math.floor(12+Math.random()*35);if(!state.cleaningQueue.includes(v.id)&&!state.cleaningBays.includes(v.id))state.cleaningQueue.push(v.id);addHistory(v,"Return inspection complete; queued for cleaning.");fillCleaningBays()}}
  render()
@@ -184,6 +392,7 @@ function fillCleaningBays(){
  for(let i=0;i<state.cleaningBays.length;i++){if(!state.cleaningBays[i]&&state.cleaningQueue.length){state.cleaningBays[i]=state.cleaningQueue.shift()}}
 }
 function nextDay(){
+ if(state.pendingWalkaround){return showModal("Finish Current Walk-Around","Complete or cancel the active customer walk-around before advancing to the next day.")}
  state.date.setDate(state.date.getDate()+1);state.minute=420;state.revenueToday=0;state.laborToday=0;state.rentalsToday=0;state.returnsToday=0;state.weather=pick(["68°F Clear","61°F Cloudy","58°F Rain","72°F Sunny","64°F Windy"]);
  state.reservations=Array.from({length:15},(_,i)=>makeReservation(i));state.selectedReservation=state.reservations[0].id;
  state.cleaningBays=[null,null,null,null,null,null];state.cleaningQueue=[];
@@ -200,11 +409,24 @@ function renderOtherScreens(){
 }
 function showModal(title,body){$("#modalBody").innerHTML=`<h2>${title}</h2><div>${body}</div>`;$("#modal").showModal()}
 $$(".nav-btn").forEach(b=>b.onclick=()=>{$$(".nav-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");$$(".screen").forEach(s=>s.classList.remove("active"));$("#screen-"+b.dataset.screen).classList.add("active")});
-$$(".facility-tab").forEach(b=>b.onclick=()=>{$$(".facility-tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");let zone=b.dataset.zone;if(zone==="cleaning")showModal("Cleaning Bay",`${state.fleet.filter(v=>v.status==="Cleaning").length} vehicles are currently in cleaning. Cars wait in queue until one of six numbered bays is available.`);if(zone==="office")showModal("Manager Office","Phone calls, inbox items, employee issues, reports, and escalations are handled here.")});
-$("#playBtn").onclick=()=>{state.running=!state.running;if(state.running&&!timer)timer=setInterval(()=>tick(5),900);else if(!state.running&&timer){clearInterval(timer);timer=null}render()};
-$("#advance15Btn").onclick=()=>tick(15);$("#nextDayBtn").onclick=nextDay;
+$$(".facility-tab").forEach(b=>b.onclick=()=>{$$(".facility-tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");let zone=b.dataset.zone;if(zone==="cleaning")showModal("Cleaning Bay",`${state.fleet.filter(v=>v.status==="Cleaning").length} vehicles are currently in cleaning. Cars wait in queue until one of six numbered bays is available.`);if(zone==="walkaround")openWalkaround();if(zone==="office")showModal("Manager Office","Phone calls, inbox items, employee issues, reports, and escalations are handled here.")});
+
+function startTimer(){
+ if(timer){clearInterval(timer);timer=null}
+ const speeds={slow:{minutes:1,ms:5000},normal:{minutes:1,ms:2500},fast:{minutes:2,ms:1500}};
+ const s=speeds[state.simSpeed]||speeds.normal;
+ timer=setInterval(()=>tick(s.minutes),s.ms)
+}
+
+$("#playBtn").onclick=()=>{state.running=!state.running;if(state.running&&!timer)startTimer();else if(!state.running&&timer){clearInterval(timer);timer=null}render()};
+$("#advance5Btn").onclick=()=>tick(5);
+$("#advance15Btn").onclick=()=>tick(15);
+$("#speedSelect").value=state.simSpeed||"normal";
+$("#speedSelect").onchange=()=>{state.simSpeed=$("#speedSelect").value;if(state.running)startTimer()};
+$("#nextDayBtn").onclick=nextDay;
 $("#saveBtn").onclick=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify({...state,date:state.date.toISOString()}));showModal("Game Saved","Your branch was saved in this browser.")};
 $("#loadBtn").onclick=()=>{let raw=localStorage.getItem(SAVE_KEY);if(!raw)return showModal("Load Game","No v0.4.0 save was found.");state=JSON.parse(raw);state.date=new Date(state.date);state.running=false;if(timer){clearInterval(timer);timer=null}render();showModal("Game Loaded","Your branch save has been restored.")};
+$("#confirmAssignmentBtn").onclick=()=>{if(state.selectedVehicle)assignVehicle(state.selectedVehicle)};
 $("#viewInventoryBtn").onclick=()=>{$$(".nav-btn").find(b=>b.dataset.screen==="fleet").click()};
 $("#officePhone").onclick=()=>showModal("Manager Phone",state.managerInbox.length?state.managerInbox.map(x=>`<p>${x}</p>`).join(""):"No calls waiting right now.");
 $("#officeInbox").onclick=()=>showModal("Manager Inbox","Regional utilization target is 78%. Keep ready-car availability high during peak arrivals.");
