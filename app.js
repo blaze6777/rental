@@ -1,5 +1,5 @@
 
-const SAVE_KEY="horizonRentalManager_v091";
+const SAVE_KEY="horizonRentalManager_v092";
 const CLASSES=["Economy","Midsize","Full Size","SUV","Premium SUV","Minivan","Pickup"];
 const MODELS=[
 ["Chevrolet Equinox","SUV"],["Nissan Rogue","SUV"],["Ford Explorer","Premium SUV"],["Toyota Highlander","SUV"],
@@ -37,7 +37,7 @@ function makeReservation(i){
 function newState(){
  let fleet=Array.from({length:28},(_,i)=>makeVehicle(i));
  return{
-  version:"0.9.1",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
+  version:"0.9.2",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
   fleet,reservations:Array.from({length:15},(_,i)=>makeReservation(i)),selectedReservation:null,selectedVehicle:null,pendingWalkaround:null,simSpeed:"slow",
   cleaningBays:[null,null,null,null,null,null],cleaningQueue:[],events:[],contracts:[],returnsToday:7,rentalsToday:18,
   phoneQueue:[],overdue:[],dnr:[],accounts:[
@@ -273,7 +273,7 @@ function renderAssign(){
  const sv=state.fleet.find(v=>v.id===state.selectedVehicle);
  const bar=$("#selectedVehicleBar"),confirm=$("#confirmAssignmentBtn");
  if(sv&&sv.status==="Ready"){
-   bar.className="selected-vehicle-bar ready";bar.textContent=`Selected: Unit ${sv.unit} — ${sv.model} (${sv.class})`;
+   bar.className="selected-vehicle-bar ready";bar.innerHTML=`<b>Selected: Unit ${sv.unit} — ${sv.model} (${sv.class})</b><br><span style="font-size:11px">Checkout flow: coverage → agreement → payment → signature → walk-around.</span>`;
    confirm.disabled=false
  }else{
    state.selectedVehicle=null;bar.className="selected-vehicle-bar";bar.textContent="No vehicle selected.";confirm.disabled=true
@@ -284,7 +284,20 @@ function gatherProducts(r){
  r.products.damage=$("#productDamage").checked;r.products.liability=$("#productLiability").checked;r.products.roadside=$("#productRoadside").checked;
  r.products.fuel=$("#productFuel").checked;r.products.driver=$("#productDriver").checked;r.products.seat=$("#productSeat").checked
 }
-window.selectVehicle=id=>{state.selectedVehicle=id;render();const r=selected(),v=state.fleet.find(x=>x.id===id);if(r&&v)showModal("Vehicle Selected",`<div class="selected-vehicle-banner"><b>Unit ${v.unit} — ${v.model}</b><br>${v.class} • ${v.miles.toLocaleString()} miles</div><div class="next-step"><strong>NEXT STEP:</strong> Create the rental agreement, authorize payment, sign it, then complete the walk-around.</div><button class="primary" onclick="openAgreementPreview()">Continue to Rental Agreement →</button>`)}
+window.selectVehicle=id=>{
+ state.selectedVehicle=id;
+ render();
+ const r=selected(),v=state.fleet.find(x=>x.id===id);
+ if(!r||!v)return;
+ // Start the checkout flow automatically instead of leaving the player wondering what comes next.
+ setTimeout(()=>beginCheckoutFlow(),50)
+}
+window.beginCheckoutFlow=()=>{
+ const r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle);
+ if(!r||!v)return showModal("Checkout","Select a customer and vehicle first.");
+ if(!r.coverageConfirmed)return askCustomerCoverage();
+ return openAgreementPreview()
+}
 window.assignVehicle=id=>{
  const r=selected(),v=state.fleet.find(x=>x.id===id);if(!r||!v)return;
  if(!r.agreementSigned){state.selectedVehicle=id;return openAgreementPreview()}
@@ -642,7 +655,7 @@ window.openAgreementPreview=()=>{
  const r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle);if(!r||!v)return showModal("Rental Agreement","Select an exact vehicle first.");
  const p=customerProfile(r.customer.id);if(!r.coverageConfirmed)return askCustomerCoverage();if(p?.dnr)return showModal("Do Not Rent Alert",`${p.name} is currently on the Do Not Rent list. Manager override is required.`);
  const a=estimateAgreement(r,v);
- $("#modalBody").innerHTML=`<div class="agreement-paper"><h2>HORIZON RENTAL AGREEMENT — ESTIMATE</h2>
+ $("#modalBody").innerHTML=`<div class="agreement-paper"><div class="next-step"><strong>STEP 2 OF 4:</strong> Review agreement → authorize payment → sign → walk-around.</div><h2>HORIZON RENTAL AGREEMENT — ESTIMATE</h2>
  <div class="agreement-cols"><div class="agreement-box"><b>Renter</b><br>${r.customer.name}<br>${p?.loyalty||"Non-member"}<br><br><b>Reservation</b> ${r.code||r.id}</div>
  <div class="agreement-box"><b>Vehicle</b><br>Unit ${v.unit} — ${v.model}<br>${v.class}<br>Mileage ${v.miles.toLocaleString()} • Fuel ${v.fuel}/8</div></div>
  <table class="history-table"><tr><td>Base rental (${r.days} days)</td><td>${money(a.base)}</td></tr><tr><td>Protection / options</td><td>${money(a.products)}</td></tr><tr><td>Taxes</td><td>${money(a.taxes)}</td></tr><tr><td>Fees</td><td>${money(a.fees)}</td></tr><tr><th>Estimated Total</th><th>${money(a.total)}</th></tr><tr><td>Card Authorization / Deposit</td><td>${money(a.deposit)}</td></tr></table>
@@ -684,13 +697,18 @@ window.askCustomerCoverage=()=>{
  const r=selected();if(!r)return;
  const req=customerCoverageRequest(r);
  showModal("Customer Coverage Request",`<div class="office-convo"><b>${r.customer.name}:</b><br>"${req.text}"</div>
- <p>You can apply exactly what the customer requested, or open the full product screen if they want to change anything.</p>
+ <div class="next-step"><strong>CUSTOMER CHOICE:</strong> This is what the renter is asking for. Click Apply Customer Request and the rental agreement will open automatically.</div>
  <button class="primary" onclick="applyCustomerCoverage()">Apply Customer Request</button> <button onclick="openProtection()">Review / Change Products</button>`)
 }
 window.applyCustomerCoverage=()=>{
- const r=selected();if(!r)return;const req=customerCoverageRequest(r);
- r.products={...req.products};r.protectionDecision=req.type==="none"?"Declined":"Customer Selected";r.coverageConfirmed=true;
- $("#modal").close();render()
+ const r=selected();if(!r)return;
+ const req=customerCoverageRequest(r);
+ r.products={...req.products};
+ r.protectionDecision=req.type==="none"?"Declined":"Customer Selected";
+ r.coverageConfirmed=true;
+ $("#modal").close();
+ render();
+ setTimeout(()=>openAgreementPreview(),50)
 }
 
 function protectionConversation(r){
@@ -700,18 +718,7 @@ function protectionConversation(r){
  lines.push(`LDW: ${money(24.99)}/day • Supplemental Liability: ${money(14.99)}/day • Roadside: ${money(6.99)}/day`);
  return lines.join("<br><br>")
 }
-window.deepProtection=()=>{let r=selected();if(!r)return;showModal("Protection Conversation",`${protectionConversation(r)}<div class="walkaround-actions"><button onclick="deepProtection()">Review Products</button><button onclick="declineProtection()">Customer Declines</button></div>`)}
-window.declineProtection=()=>{let r=selected();if(!r)return;r.products={damage:false,liability:false,roadside:false,fuel:false,driver:false,seat:false};r.protectionDecision="Declined";$("#modal").close();render()}
-
-function closeReturnAgreement(v){
- const c=state.contracts.find(x=>x.vehicleId===v.id&&String(x.status).includes("Returned"));if(!c)return showModal("Return Agreement","No open returned agreement was found.");
- const ch=c.returnCharges||{fuel:0,cleaning:0,late:0,damage:0},extras=Object.values(ch).reduce((a,n)=>a+(n||0),0);
- c.finalTotal=(c.daily||0)*(c.days||1)+extras;c.status="Closed";c.closedAt=fmtTime(state.minute);
- let p=customerProfile(c.customerId);if(p){p.rentals++;p.lifetimeSpend+=c.finalTotal;p.history.push(`${state.date.toLocaleDateString()}: Closed ${c.number} — ${money(c.finalTotal)}.`)}
- v.status="Cleaning";v.keyLocation="Cleaning Bay";v.cleanRemaining=Math.floor(12+Math.random()*25);if(!state.cleaningQueue.includes(v.id))state.cleaningQueue.push(v.id);fillCleaningBays();
- showModal("Final Receipt",`<div class="agreement-paper"><h2>${c.number} — FINAL RECEIPT</h2><p><b>${c.customer}</b> • Unit ${v.unit} ${v.model}</p>
- <table class="history-table"><tr><td>Rental charges</td><td>${money((c.daily||0)*(c.days||1))}</td></tr><tr><td>Fuel</td><td>${money(ch.fuel||0)}</td></tr><tr><td>Cleaning</td><td>${money(ch.cleaning||0)}</td></tr><tr><td>Late / extra</td><td>${money(ch.late||0)}</td></tr><tr><td>Damage</td><td>${money(ch.damage||0)}</td></tr><tr><th>Final Total</th><th>${money(c.finalTotal)}</th></tr></table></div>`);render()
-}
+window.deepProtection=()=>askCustomerCoverage()
 window.openReturnDesk=id=>{let v=state.fleet.find(x=>x.id===id);if(!v)return;let c=state.contracts.find(x=>x.vehicleId===v.id&&String(x.status).includes("Returned"));showModal("Return Desk",`<h2>Unit ${v.unit} — ${v.model}</h2><p>Mileage ${v.miles.toLocaleString()} • Fuel ${v.fuel}/8 • Cleanliness ${v.clean}%</p><p>${c?`Agreement ${c.number}<br>Fuel charge ${money(c.returnCharges?.fuel||0)} • Cleaning ${money(c.returnCharges?.cleaning||0)}`:"No returned agreement found."}</p><button onclick="closeReturnAgreementById('${v.id}')">Close Agreement & Print Receipt</button>`)}
 window.closeReturnAgreementById=id=>{let v=state.fleet.find(x=>x.id===id);$("#modal").close();closeReturnAgreement(v)}
 
@@ -1053,14 +1060,19 @@ $("#speedSelect").onchange=()=>{state.simSpeed=$("#speedSelect").value;if(state.
 $("#nextDayBtn").onclick=()=>{state.running=false;stopTimer();nextDay()};
 $("#saveBtn").onclick=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify({...state,date:state.date.toISOString()}));showModal("Game Saved","Your branch was saved in this browser.")};
 $("#loadBtn").onclick=()=>{let raw=localStorage.getItem(SAVE_KEY)
+ ||localStorage.getItem("horizonRentalManager_v091")
+ ||localStorage.getItem("horizonRentalManager_v090")
+ ||localStorage.getItem("horizonRentalManager_v080")
+ ||localStorage.getItem("horizonRentalManager_v070")
+ ||localStorage.getItem("horizonRentalManager_v062")
  ||localStorage.getItem("horizonRentalManager_v061")
  ||localStorage.getItem("horizonRentalManager_v060")
  ||localStorage.getItem("horizonRentalManager_v051")
  ||localStorage.getItem("horizonRentalManager_v050")
  ||localStorage.getItem("horizonRentalManager_v041")
  ||localStorage.getItem("horizonRentalManager_v040");
- if(!raw)return showModal("Load Game","No compatible Horizon Rental Manager save was found.");state=migrateState(JSON.parse(raw));state.running=false;stopTimer();render();showModal("Game Loaded","Your branch save has been upgraded and restored for v0.6.2.")};
-$("#confirmAssignmentBtn").onclick=()=>{if(state.selectedVehicle)assignVehicle(state.selectedVehicle)};
+ if(!raw)return showModal("Load Game","No compatible Horizon Rental Manager save was found.");state=migrateState(JSON.parse(raw));state.running=false;stopTimer();render();showModal("Game Loaded","Your branch save has been upgraded and restored for v0.9.2.")};
+$("#confirmAssignmentBtn").onclick=()=>{if(state.selectedVehicle)beginCheckoutFlow()};
 $("#viewInventoryBtn").onclick=()=>{$$(".nav-btn").find(b=>b.dataset.screen==="fleet").click()};
 $("#officePhone").onclick=answerPhone;
 $("#officeInbox").onclick=()=>showModal("Manager Inbox","Regional utilization target is 78%. Keep ready-car availability high during peak arrivals.");
