@@ -1,5 +1,5 @@
 
-const SAVE_KEY="horizonRentalManager_v092";
+const SAVE_KEY="horizonRentalManager_v094";
 const CLASSES=["Economy","Midsize","Full Size","SUV","Premium SUV","Minivan","Pickup"];
 const MODELS=[
 ["Chevrolet Equinox","SUV"],["Nissan Rogue","SUV"],["Ford Explorer","Premium SUV"],["Toyota Highlander","SUV"],
@@ -37,7 +37,7 @@ function makeReservation(i){
 function newState(){
  let fleet=Array.from({length:28},(_,i)=>makeVehicle(i));
  return{
-  version:"0.9.2",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
+  version:"0.9.4",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
   fleet,reservations:Array.from({length:15},(_,i)=>makeReservation(i)),selectedReservation:null,selectedVehicle:null,pendingWalkaround:null,simSpeed:"slow",
   cleaningBays:[null,null,null,null,null,null],cleaningQueue:[],events:[],contracts:[],returnsToday:7,rentalsToday:18,
   phoneQueue:[],overdue:[],dnr:[],accounts:[
@@ -139,16 +139,34 @@ function migrateState(s){
  }));
  s.reservations=Array.isArray(s.reservations)?s.reservations:fresh.reservations;
  if(!["slow","normal","fast"].includes(s.simSpeed))s.simSpeed="slow";
- s.version="0.6.2";
+ s.version="0.9.4";
  return s
 }
 state=migrateState(state);
 
+function safeRender(name,fn){
+ try{fn()}
+ catch(err){
+   console.error(`Render failure in ${name}:`,err);
+   const msg=$("#branchMessage");
+   if(msg)msg.textContent=`Display issue repaired around ${name}; other controls remain available.`;
+ }
+}
 function render(){
- $("#topDate").textContent=state.date.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric",year:"numeric"});
- $("#topTime").textContent=fmtTime(state.minute);$("#weatherText").textContent=state.weather;
- $("#playBtn").textContent=state.running?"⏸ Pause":"▶ Run"; if($("#speedSelect"))$("#speedSelect").value=state.simSpeed||"slow"; updateTimerStatus();
- renderQueue();renderCustomer();renderAssign();renderFacility();renderKpis();renderOtherScreens()
+ try{
+  $("#topDate").textContent=state.date.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric",year:"numeric"});
+  $("#topTime").textContent=fmtTime(state.minute);
+  $("#weatherText").textContent=state.weather;
+  $("#playBtn").textContent=state.running?"⏸ Pause":"▶ Run";
+  if($("#speedSelect"))$("#speedSelect").value=state.simSpeed||"slow";
+  updateTimerStatus();
+ }catch(err){console.error("Header render error:",err)}
+ safeRender("customer queue",renderQueue);
+ safeRender("customer",renderCustomer);
+ safeRender("vehicle assignment",renderAssign);
+ safeRender("facility",renderFacility);
+ safeRender("KPIs",renderKpis);
+ safeRender("secondary screens",renderOtherScreens);
 }
 function renderQueue(){
  const w=waiting();$("#queueCount").textContent=`(${w.length})`;$("#estWait").textContent=`${Math.max(0,w.length*3-1)} min`;
@@ -166,7 +184,14 @@ function renderCustomer(){
   "I'd like to keep the pickup quick if possible.",
   "That vehicle works for me."
  ];
- $("#speechBubble").textContent=scripts[Math.min(r.conversation||0,scripts.length-1)];
+ 
+ if(r.checkoutStage==="coverage" && r.customerCoverageRequest){
+   $("#speechBubble").textContent=r.customerCoverageRequest.text;
+ }else if(r.coverageConfirmed){
+   $("#speechBubble").textContent=`That coverage works for me. Let's finish the agreement.`;
+ }else{
+   $("#speechBubble").textContent=scripts[Math.min(r.conversation||0,scripts.length-1)];
+ }
  $("#rentalInfo").innerHTML=`<div class="customer-title"><div class="face">${initials(r.customer.name)}</div><div><h3>${r.customer.name}</h3><div class="info-grid">
  <div><b>Phone:</b> ${r.customer.phone}</div><div><b>Reservation:</b> ${r.id.slice(0,8).toUpperCase()}</div>
  <div><b>Email:</b> ${r.customer.email}</div><div><b>Pickup:</b> ${fmtTime(r.pickup)}</div>
@@ -182,6 +207,22 @@ function renderCustomer(){
  ["Other options",()=>openOtherOptions(r.id)],
  ];
  $("#conversationButtons").innerHTML=btns.map((b,i)=>`<button onclick="counterAction(${i})">${b[0]}</button>`).join("");
+ const existingGuide=$("#checkoutGuide");
+ if(existingGuide)existingGuide.remove();
+ if(state.selectedVehicle){
+   const v=state.fleet.find(x=>x.id===state.selectedVehicle);
+   if(v){
+     const guide=document.createElement("div");
+     guide.id="checkoutGuide";guide.className="checkout-next-panel";
+     if(!r.coverageConfirmed){
+       const req=customerCoverageRequest(r);
+       guide.innerHTML=`<b>Customer coverage choice</b><div class="customer-quote">"${req.text}"</div><button class="primary" onclick="acceptCoverageAndOpenAgreement()">Accept Coverage & Open Rental Agreement →</button> <button onclick="openProtection(r.id)">Change Coverage</button>`;
+     }else{
+       guide.innerHTML=`<b>Vehicle selected: Unit ${v.unit} — ${v.model}</b><br>Coverage is confirmed.<br><br><button class="primary" onclick="openAgreementPreview()">Open Rental Agreement →</button>`;
+     }
+     $("#rentalInfo").appendChild(guide);
+   }
+ }
  window._counterFns=btns.map(b=>b[1]);
  ["damage","liability","roadside","fuel","driver","seat"].forEach(k=>{
    let el=$("#product"+k[0].toUpperCase()+k.slice(1)); if(el)el.checked=!!r.products[k]
@@ -438,6 +479,30 @@ function renderFacility(){
 }
 function lotCar(v,tall=false){return `<div class="lot-car" onclick="vehicleDetails('${v.id}')"><span>${v.unit}</span></div>`}
 window.vehicleDetails=id=>vehicleProfile(id)
+
+
+function renderKpis(){
+ const u=utilization();
+ const carsOnLot=$("#carsOnLot"), lotBreakdown=$("#lotBreakdown"), todaysRentals=$("#todaysRentals"),
+ rentalsBreakdown=$("#rentalsBreakdown"), returnsToday=$("#returnsToday"), returnsBreakdown=$("#returnsBreakdown"),
+ utilKpi=$("#utilKpi"), utilBar=$("#utilBar"), satKpi=$("#satKpi"), satBar=$("#satBar"),
+ revenueKpi=$("#revenueKpi"), laborKpi=$("#laborKpi"), branchStatus=$("#branchStatus"), branchMessage=$("#branchMessage");
+ if(carsOnLot) carsOnLot.textContent=state.fleet.filter(v=>v.status!=="Rented").length;
+ if(lotBreakdown) lotBreakdown.textContent=`${ready().length} Ready • ${state.fleet.filter(v=>v.status==="Cleaning").length} Cleaning • ${state.fleet.filter(v=>v.status==="Maintenance").length} Maintenance`;
+ if(todaysRentals) todaysRentals.textContent=state.rentalsToday;
+ if(rentalsBreakdown) rentalsBreakdown.textContent=`${state.contracts.filter(c=>c.status==="Open").length} currently out`;
+ if(returnsToday) returnsToday.textContent=state.returnsToday;
+ if(returnsBreakdown) returnsBreakdown.textContent=`${state.fleet.filter(v=>v.status==="Returned").length} in return lane`;
+ if(utilKpi) utilKpi.textContent=u+"%";
+ if(utilBar) utilBar.style.width=Math.min(100,u)+"%";
+ if(satKpi) satKpi.textContent=state.satisfaction+"%";
+ if(satBar) satBar.style.width=Math.min(100,state.satisfaction)+"%";
+ if(revenueKpi) revenueKpi.textContent=money(state.revenueToday);
+ if(laborKpi) laborKpi.textContent=`Labor ${money(state.laborToday)}`;
+ if(branchStatus) branchStatus.textContent=`● ${state.branchStatus}`;
+ const problems=waiting().length>4||state.fleet.filter(v=>v.status==="Cleaning").length>6||ready().length<5;
+ if(branchMessage) branchMessage.textContent=problems?"Operational pressure building — review queue and vehicle readiness.":"Keep up the good work!";
+}
 
 function tick(mins=5){
  state.minute+=mins;applyOperatingCosts(mins);processTransfers();syncParking();if(state.minute%30<mins)autoSnapshot("30-minute autosave");if(state.minute%30<mins){maybeManagerVisitor();maybeRareEvent()}if(state.minute%60<mins&&Math.random()<.12)createRoadside();
@@ -938,7 +1003,7 @@ function renderOtherScreens(){
  
 
  const waitingVisitor=state.managerVisitors.find(x=>x.status==="Waiting");
- $("#officeContent").innerHTML=`<h2>Branch Manager Office</h2>${waitingVisitor?`<div class="knock"><b>Knock at the door — ${waitingVisitor.employee}</b><br>${waitingVisitor.reason}<br><button onclick="handleVisitor('${waitingVisitor.id}')">Talk to Employee</button></div>`:""}
+ $("#officeContent").innerHTML=`<h2>Branch Manager Office</h2><div class="next-step"><strong>OFFICE IS LIVE:</strong> Use the computer, phone, inbox, whiteboard, window, or calendar below.</div>${waitingVisitor?`<div class="knock"><b>Knock at the door — ${waitingVisitor.employee}</b><br>${waitingVisitor.reason}<br><button onclick="handleVisitor('${waitingVisitor.id}')">Talk to Employee</button></div>`:""}
  <div class="office-room">
  <div class="office-object" onclick="officeAction('computer')"><h3>🖥 Manager Computer</h3>Daily planner, staffing, reports and fleet forecast.</div>
  <div class="office-object" onclick="officeAction('phone')"><h3>☎ Office Phone</h3>${state.phoneQueue.length} calls waiting. Roadside, branches and customers.</div>
@@ -999,13 +1064,30 @@ function renderOtherScreens(){
  } catch(err) {
    console.error("Secondary screen render error:",err);
    const ops=$("#operationsContent");
-   if(ops) ops.innerHTML=`<h2>Live Branch Operations</h2><div class="ops-card"><h3>Operations Recovery</h3><p>The game repaired missing data from an older save. Reload this screen once. If this message remains, start a new v0.6.2 game.</p><pre>${String(err.message||err)}</pre></div>`;
+   if(ops) ops.innerHTML=`<h2>Live Branch Operations</h2><div class="ops-card"><h3>Operations Recovery</h3><p>The game repaired missing data from an older save. Reload this screen once. If this message remains, start a new v0.9.4 game.</p><pre>${String(err.message||err)}</pre></div>`;
  }
 
 }
 function showModal(title,body){$("#modalBody").innerHTML=`<h2>${title}</h2><div>${body}</div>`;$("#modal").showModal()}
-$$(".nav-btn").forEach(b=>b.onclick=()=>{$$(".nav-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");$$(".screen").forEach(s=>s.classList.remove("active"));$("#screen-"+b.dataset.screen).classList.add("active")});
-$$(".facility-tab").forEach(b=>b.onclick=()=>{$$(".facility-tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");let zone=b.dataset.zone;if(zone==="cleaning")showModal("Cleaning Bay",`${state.fleet.filter(v=>v.status==="Cleaning").length} vehicles are currently in cleaning. Cars wait in queue until one of six numbered bays is available.`);if(zone==="walkaround")openWalkaround();if(zone==="office")showModal("Manager Office","Phone calls, inbox items, employee issues, reports, and escalations are handled here.")});
+$$(".nav-btn").forEach(b=>b.onclick=()=>{
+ $$(".nav-btn").forEach(x=>x.classList.remove("active"));
+ b.classList.add("active");
+ $$(".screen").forEach(s=>s.classList.remove("active"));
+ const target=$("#screen-"+b.dataset.screen);
+ if(target)target.classList.add("active");
+ safeRender("secondary screens",renderOtherScreens);
+});
+$$(".facility-tab").forEach(b=>b.onclick=()=>{
+ $$(".facility-tab").forEach(x=>x.classList.remove("active"));
+ b.classList.add("active");
+ const zone=b.dataset.zone;
+ if(zone==="cleaning")showModal("Cleaning Bay",`${state.fleet.filter(v=>v.status==="Cleaning").length} vehicles are currently in cleaning. Cars wait in queue until one of six numbered bays is available.`);
+ if(zone==="walkaround")openWalkaround();
+ if(zone==="office"){
+   const nav=$$(".nav-btn").find(x=>x.dataset.screen==="office");
+   if(nav)nav.click();
+ }
+});
 
 function stopTimer(){
  timerToken++;
@@ -1047,6 +1129,101 @@ function startTimer(){
  timerCountdown=setInterval(updateTimerStatus,1000)
 }
 
+
+/* v0.9.3 checkout controller — intentionally overrides older checkout handlers */
+window.selectVehicle=id=>{
+ const r=selected(),v=state.fleet.find(x=>x.id===id);
+ if(!r||!v)return;
+ state.selectedVehicle=id;
+ r.checkoutStage="coverage";
+ r.customerCoverageRequest=null;
+ r.coverageConfirmed=false;
+ customerCoverageRequest(r);
+ render();
+ showCheckoutCoverage(r,v);
+};
+
+window.showCheckoutCoverage=(r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle))=>{
+ if(!r||!v)return;
+ const req=customerCoverageRequest(r);
+ r.checkoutStage="coverage";
+ renderCustomer();
+ showModal("Customer Coverage Choice",`
+   <div class="selected-vehicle-banner"><b>Selected Vehicle:</b> Unit ${v.unit} — ${v.model}</div>
+   <div class="office-convo"><b>${r.customer.name} says:</b><br><br>"${req.text}"</div>
+   <div class="next-step"><strong>NEXT:</strong> Accept what the customer asked for and go directly to the rental agreement.</div>
+   <button class="primary" onclick="acceptCoverageAndOpenAgreement()">Accept Coverage & Open Rental Agreement →</button>
+   <button onclick="openProtection('${r.id}')">Change Coverage</button>
+ `)
+};
+
+window.acceptCoverageAndOpenAgreement=()=>{
+ const r=selected();if(!r)return;
+ const req=customerCoverageRequest(r);
+ r.products={...req.products};
+ r.protectionDecision=req.type==="none"?"Declined":"Customer Selected";
+ r.coverageConfirmed=true;
+ r.checkoutStage="agreement";
+ render();
+ const d=$("#modal"); if(d?.open)d.close();
+ setTimeout(()=>window.openAgreementPreview(),80);
+};
+
+window.askCustomerCoverage=()=>{
+ const r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle);
+ if(!r)return;
+ const req=customerCoverageRequest(r);
+ r.checkoutStage="coverage";
+ render();
+ if(v)return showCheckoutCoverage(r,v);
+ showModal("Customer Coverage Choice",`<div class="office-convo"><b>${r.customer.name} says:</b><br><br>"${req.text}"</div><p>Select a vehicle and this choice will carry into the rental agreement.</p>`);
+};
+
+window.deepProtection=()=>window.askCustomerCoverage();
+
+const _legacyOpenProtection=window.openProtection;
+window.openProtection=id=>{
+ const r=state.reservations.find(x=>x.id===id)||selected();if(!r)return;
+ // If this is the first protection discussion, make the customer state a preference first.
+ if(!r.customerCoverageRequest){
+   r.customerCoverageRequest=null;
+   customerCoverageRequest(r);
+ }
+ const req=r.customerCoverageRequest;
+ $("#modalBody").innerHTML=`<h2>Coverage Requested by ${r.customer.name}</h2>
+ <div class="office-convo"><b>${r.customer.name} says:</b><br><br>"${req.text}"</div>
+ <p>Adjust the customer's choices if they ask for a change.</p>
+ <div class="protection-choice"><label><input type="checkbox" id="mDamage" ${req.products.damage?"checked":""}> Damage Waiver (LDW)</label><b>$24.99/day</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mLiability" ${req.products.liability?"checked":""}> Supplemental Liability</label><b>$14.99/day</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mRoadside" ${req.products.roadside?"checked":""}> Roadside Assistance</label><b>$6.99/day</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mFuel" ${req.products.fuel?"checked":""}> Prepaid Fuel</label><b>$64.99</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mDriver" ${req.products.driver?"checked":""}> Additional Driver</label><b>$7.00/day</b></div>
+ <div class="protection-choice"><label><input type="checkbox" id="mSeat" ${req.products.seat?"checked":""}> Child Seat</label><b>$13.00/day</b></div>
+ <div class="action-row" style="margin-top:12px"><button class="primary" id="saveProtectionBtn">Save Coverage${state.selectedVehicle?" & Open Agreement →":""}</button><button id="declineProtectionBtn">Decline All</button></div>`;
+ $("#modal").showModal();
+ setTimeout(()=>{
+   $("#saveProtectionBtn").onclick=()=>{
+     r.products={damage:$("#mDamage").checked,liability:$("#mLiability").checked,roadside:$("#mRoadside").checked,fuel:$("#mFuel").checked,driver:$("#mDriver").checked,seat:$("#mSeat").checked};
+     r.coverageConfirmed=true;r.checkoutStage=state.selectedVehicle?"agreement":"vehicle";
+     $("#modal").close();render();
+     if(state.selectedVehicle)setTimeout(()=>window.openAgreementPreview(),80);
+   };
+   $("#declineProtectionBtn").onclick=()=>{
+     r.products={damage:false,liability:false,roadside:false,fuel:false,driver:false,seat:false};
+     r.coverageConfirmed=true;r.protectionDecision="Declined";r.checkoutStage=state.selectedVehicle?"agreement":"vehicle";
+     $("#modal").close();render();
+     if(state.selectedVehicle)setTimeout(()=>window.openAgreementPreview(),80);
+   };
+ },0)
+};
+
+window.beginCheckoutFlow=()=>{
+ const r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle);
+ if(!r||!v)return showModal("Checkout","Select a customer and vehicle first.");
+ if(!r.coverageConfirmed)return showCheckoutCoverage(r,v);
+ return window.openAgreementPreview();
+};
+
 $("#morningBoardBtn").onclick=showMorningBoard;
 $("#playBtn").onclick=()=>{
  if(state.running){state.running=false;stopTimer()}
@@ -1060,6 +1237,8 @@ $("#speedSelect").onchange=()=>{state.simSpeed=$("#speedSelect").value;if(state.
 $("#nextDayBtn").onclick=()=>{state.running=false;stopTimer();nextDay()};
 $("#saveBtn").onclick=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify({...state,date:state.date.toISOString()}));showModal("Game Saved","Your branch was saved in this browser.")};
 $("#loadBtn").onclick=()=>{let raw=localStorage.getItem(SAVE_KEY)
+ ||localStorage.getItem("horizonRentalManager_v093")
+ ||localStorage.getItem("horizonRentalManager_v092")
  ||localStorage.getItem("horizonRentalManager_v091")
  ||localStorage.getItem("horizonRentalManager_v090")
  ||localStorage.getItem("horizonRentalManager_v080")
@@ -1071,7 +1250,7 @@ $("#loadBtn").onclick=()=>{let raw=localStorage.getItem(SAVE_KEY)
  ||localStorage.getItem("horizonRentalManager_v050")
  ||localStorage.getItem("horizonRentalManager_v041")
  ||localStorage.getItem("horizonRentalManager_v040");
- if(!raw)return showModal("Load Game","No compatible Horizon Rental Manager save was found.");state=migrateState(JSON.parse(raw));state.running=false;stopTimer();render();showModal("Game Loaded","Your branch save has been upgraded and restored for v0.9.2.")};
+ if(!raw)return showModal("Load Game","No compatible Horizon Rental Manager save was found.");state=migrateState(JSON.parse(raw));state.running=false;stopTimer();render();showModal("Game Loaded","Your branch save has been upgraded and restored for v0.9.4.")};
 $("#confirmAssignmentBtn").onclick=()=>{if(state.selectedVehicle)beginCheckoutFlow()};
 $("#viewInventoryBtn").onclick=()=>{$$(".nav-btn").find(b=>b.dataset.screen==="fleet").click()};
 $("#officePhone").onclick=answerPhone;

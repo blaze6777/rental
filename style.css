@@ -117,3 +117,7 @@ dialog{width:min(760px,95vw);border:1px solid #60717b;border-radius:7px;padding:
 .next-step{background:#fff8d8;border:2px solid #d3a92f;border-radius:8px;padding:10px;margin:10px 0}
 .next-step strong{font-size:13px}.coverage-choice{background:#f3f8f5;border:1px solid #b9d4c5;border-radius:7px;padding:10px;margin:8px 0}
 .coverage-choice button{margin-top:6px}.selected-vehicle-banner{background:#e9f7ef;border:2px solid #168b58;border-radius:8px;padding:10px;margin:8px 0}
+
+.checkout-next-panel{background:#fff7d6;border:2px solid #d3a528;border-radius:9px;padding:12px;margin:10px 0}
+.checkout-next-panel .customer-quote{font-size:14px;font-weight:700;margin:8px 0;color:#25342c}
+.checkout-next-panel button{font-size:13px;padding:10px 14px}
