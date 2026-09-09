@@ -121,3 +121,13 @@ dialog{width:min(760px,95vw);border:1px solid #60717b;border-radius:7px;padding:
 .checkout-next-panel{background:#fff7d6;border:2px solid #d3a528;border-radius:9px;padding:12px;margin:10px 0}
 .checkout-next-panel .customer-quote{font-size:14px;font-weight:700;margin:8px 0;color:#25342c}
 .checkout-next-panel button{font-size:13px;padding:10px 14px}
+
+.sat-chip{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:800;font-size:11px}
+.sat-great{background:#dff5e8}.sat-good{background:#eef6df}.sat-mid{background:#fff3d2}.sat-bad{background:#ffe0dc}
+.promise-card{background:#f6f8f9;border:1px solid #cad5da;border-radius:8px;padding:10px;margin:8px 0}
+.match-card{border-left:5px solid #198754;background:#f8fbf9;padding:10px;border-radius:5px;margin:8px 0}
+.match-card.warn{border-left-color:#d09b22;background:#fffaf0}.match-card.bad{border-left-color:#b74238;background:#fff4f2}
+.review-card{background:white;border:1px solid #d3dadd;border-radius:8px;padding:10px;margin:8px 0}
+.review-stars{font-size:18px;letter-spacing:1px}.sat-event{font-size:11px;padding:4px 0;border-bottom:1px solid #edf0f2}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:10px 0}
+.metric-grid .simple-card h1{margin:5px 0}

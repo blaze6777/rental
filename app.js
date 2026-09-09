@@ -1,5 +1,5 @@
 
-const SAVE_KEY="horizonRentalManager_v094";
+const SAVE_KEY="horizonRentalManager_v0100";
 const CLASSES=["Economy","Midsize","Full Size","SUV","Premium SUV","Minivan","Pickup"];
 const MODELS=[
 ["Chevrolet Equinox","SUV"],["Nissan Rogue","SUV"],["Ford Explorer","Premium SUV"],["Toyota Highlander","SUV"],
@@ -37,7 +37,7 @@ function makeReservation(i){
 function newState(){
  let fleet=Array.from({length:28},(_,i)=>makeVehicle(i));
  return{
-  version:"0.9.4",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
+  version:"0.10.0",date:new Date(2026,8,8),minute:554,running:false,weather:"72°F Clear",
   fleet,reservations:Array.from({length:15},(_,i)=>makeReservation(i)),selectedReservation:null,selectedVehicle:null,pendingWalkaround:null,simSpeed:"slow",
   cleaningBays:[null,null,null,null,null,null],cleaningQueue:[],events:[],contracts:[],returnsToday:7,rentalsToday:18,
   phoneQueue:[],overdue:[],dnr:[],accounts:[
@@ -62,6 +62,7 @@ function newState(){
   branchYears:0,
   parkingSpaces:[],managerVisitors:[],roadsideCases:[],rareEvents:[],fleetDeliveries:[],
   branchRelationships:{},areaMode:false,managedBranches:[],
+  customerReviews:[],serviceRecoveries:[],satisfactionMetrics:{exactClass:0,totalAssignments:0,complaints:0,totalWait:0,waitCount:0},
   satisfaction:92,revenueToday:4820,laborToday:1140,branchStatus:"Running Smoothly",managerInbox:[],
   employees:[
    {name:"Megan Harper",role:"Assistant Manager",status:"Working",task:"Counter",sales:82,service:91,years:4,pay:24.5,attendance:96,history:["Promoted to Assistant Manager"],auto:true},
@@ -130,6 +131,9 @@ function migrateState(s){
  s.fleetDeliveries=Array.isArray(s.fleetDeliveries)?s.fleetDeliveries:[];
  s.branchRelationships=s.branchRelationships||{};
  s.areaMode=!!s.areaMode;s.managedBranches=Array.isArray(s.managedBranches)?s.managedBranches:[];
+ s.customerReviews=Array.isArray(s.customerReviews)?s.customerReviews:[];
+ s.serviceRecoveries=Array.isArray(s.serviceRecoveries)?s.serviceRecoveries:[];
+ s.satisfactionMetrics={exactClass:0,totalAssignments:0,complaints:0,totalWait:0,waitCount:0,...(s.satisfactionMetrics||{})};
  s.employees=(Array.isArray(s.employees)?s.employees:fresh.employees).map((e,i)=>({...fresh.employees[i%fresh.employees.length],...e,history:Array.isArray(e.history)?e.history:[]}));
  s.fleet=(Array.isArray(s.fleet)?s.fleet:fresh.fleet).map(v=>({
    condition:{front:[],rear:[],driver:[],passenger:[],glass:[],wheels:[],roof:[],interior:[]},
@@ -139,7 +143,7 @@ function migrateState(s){
  }));
  s.reservations=Array.isArray(s.reservations)?s.reservations:fresh.reservations;
  if(!["slow","normal","fast"].includes(s.simSpeed))s.simSpeed="slow";
- s.version="0.9.4";
+ s.version="0.10.0";
  return s
 }
 state=migrateState(state);
@@ -197,7 +201,7 @@ function renderCustomer(){
  <div><b>Email:</b> ${r.customer.email}</div><div><b>Pickup:</b> ${fmtTime(r.pickup)}</div>
  <div><b>Loyalty:</b> ${r.customer.loyalty}</div><div><b>Duration:</b> ${r.days} days</div>
  <div><b>Type:</b> ${r.customer.type}</div><div><b>Vehicle Class:</b> ${r.class}</div>
- <div><b>Rate:</b> $${r.rate.toFixed(2)}/day</div><div><b>Status:</b> ${r.status}</div></div></div></div>`;
+ <div><b>Rate:</b> $${r.rate.toFixed(2)}/day</div><div><b>Status:</b> ${r.status}</div></div><div class="promise-card"><b>Reservation Promise:</b> ${r.class}<br>${r.promise?.reason||"Trip"} • ${r.promise?.party||1} traveler(s) • ${r.promise?.luggage||1} luggage item(s)<br>${satisfactionSummary(r)}</div></div></div>`;
  const btns=[
  ["Confirm reservation",()=>confirmReservation(r.id)],
  ["Offer an upgrade",()=>offerUpgrade(r.id)],
@@ -450,11 +454,15 @@ window.completeWalkaround=()=>{
  const r=state.reservations.find(x=>x.id===p.reservationId),v=state.fleet.find(x=>x.id===p.vehicleId),c=state.contracts.find(x=>x.id===p.contractId);
  c.walkaround={completed:true,checkoutMileage:p.checkoutMileage,checkoutFuel:p.checkoutFuel,existingDamageIds:(v.damage||[]).filter(d=>d.status!=="Repaired").map(d=>d.id),completedAt:fmtTime(state.minute)};
  c.status="Open";r.status="Out";v.status="Rented";v.assignedRental=r.id;v.keyLocation="Customer";
+ const match=vehicleMatch(r,v);assignmentImpact(r,v,match);
+ if((v.damage||[]).filter(d=>d.status!=="Repaired").length===0)adjustRentalSat(r,1,"Clean damage-free walk-around");
+ else if(p.newDamage.length>0)adjustRentalSat(r,1,"Existing condition documented before departure");
+ c.customerSatisfactionAtCheckout=r.satisfaction;c.reservedClass=r.class;c.actualClass=v.class;c.vehicleMatch=match.type;
  addHistory(v,`Customer walk-around completed with ${r.customer.name}. Vehicle released on ${c.number}.`);
  state.pendingWalkaround=null;state.selectedVehicle=null;
  state.selectedReservation=waiting()[0]?.id||state.reservations.find(x=>x.status==="Booked")?.id||null;
  $("#modal").close();render();
- showModal("Vehicle Released",`${r.customer.name} has completed the walk-around and is leaving in Unit ${v.unit}.`)
+ showModal("Vehicle Released",`${r.customer.name} has completed the walk-around and is leaving in Unit ${v.unit}.<br><br>${satisfactionSummary(r)}<br><small>Customer satisfaction will continue to change if return/billing issues occur.</small>`)
 }
 window.cancelWalkaround=()=>{
  const p=state.pendingWalkaround;if(!p)return;
@@ -703,7 +711,7 @@ window.openCustomerProfile=id=>{
  const rentals=state.contracts.filter(c=>c.customerId===id);
  showModal("Customer Profile",`<div class="agreement-paper"><h2>${p.name} ${p.dnr?'<span class="dnr-badge">DO NOT RENT</span>':p.loyalty!=="None"?`<span class="loyalty-badge">${p.loyalty}</span>`:""}</h2>
  <div class="agreement-cols"><div class="agreement-box"><b>Contact</b><br>${p.email}<br>${p.phone}<br><br><b>Favorite Class:</b> ${p.favoriteClass}<br><b>Lifetime Spend:</b> ${money(p.lifetimeSpend)}</div>
- <div class="agreement-box"><b>Rental History</b><br>${p.rentals+rentalCount(p.id)} total rentals<br>${p.complaints.length} complaints<br><b>Preferences:</b><br>${p.preferences.join("<br>")||"None recorded"}</div></div>
+ <div class="agreement-box"><b>Rental History</b><br>${p.rentals+rentalCount(p.id)} total rentals<br>${p.complaints.length} complaints<br><b>Average Satisfaction:</b> ${p.satisfactionHistory?.length?Math.round(p.satisfactionHistory.reduce((a,n)=>a+n,0)/p.satisfactionHistory.length)+"%":"No completed score"}<br><b>Preferences:</b><br>${p.preferences.join("<br>")||"None recorded"}</div></div>
  <h3>Notes / History</h3>${[...p.notes,...p.history].slice(-8).map(x=>`<p>${x}</p>`).join("")||"<p>No history yet.</p>"}
  <div class="walkaround-actions"><button onclick="toggleDNR('${p.id}')">${p.dnr?"Remove DNR":"Place on Do Not Rent"}</button><button onclick="addCustomerNote('${p.id}')">Add Note</button></div></div>`)
 }
@@ -741,6 +749,174 @@ window.signAgreement=()=>{
  r.agreementSigned=true;$("#modal").close();showModal("Agreement Signed",`Agreement signed and payment authorized.<div class="next-step"><strong>NEXT STEP:</strong> Walk outside with ${r.customer.name} and inspect the assigned vehicle together.</div><button class="primary" onclick="document.querySelector(\'#modal\').close();assignVehicle(state.selectedVehicle)">Start Vehicle Walk-Around →</button>`)
 }
 
+
+
+const VEHICLE_CAPACITY={"Economy":5,"Midsize":5,"Full Size":5,"SUV":5,"Premium SUV":7,"Minivan":7,"Pickup":5};
+const CLASS_RANK={"Economy":1,"Midsize":2,"Full Size":3,"SUV":4,"Premium SUV":5,"Minivan":5,"Pickup":4};
+
+function ensureRentalExperience(r){
+ if(!r)return;
+ if(!Number.isFinite(r.satisfaction))r.satisfaction=82;
+ if(!Array.isArray(r.satEvents))r.satEvents=[];
+ if(!r.promise){
+   const family=r.customer.type==="Leisure"&&Math.random()<.45;
+   const party=family?Math.floor(3+Math.random()*4):Math.floor(1+Math.random()*3);
+   const luggage=family?Math.floor(3+Math.random()*4):Math.floor(1+Math.random()*3);
+   const reason=r.customer.note==="Insurance replacement"?"Insurance replacement":r.customer.type==="Business"?"Business trip":family?"Family trip":"Personal travel";
+   const mustHave=[];
+   if(family&&party>=5)mustHave.push("Enough room for family");
+   if(r.customer.note==="Needs child seat")mustHave.push("Child seat");
+   if(["SUV","Premium SUV","Minivan"].includes(r.class)&&family)mustHave.push("Cargo space");
+   r.promise={party,luggage,reason,mustHave};
+ }
+}
+state.reservations.forEach(ensureRentalExperience);
+
+function satLabel(score){
+ if(score>=95)return["Delighted","sat-great"];
+ if(score>=85)return["Very satisfied","sat-good"];
+ if(score>=70)return["Satisfied","sat-mid"];
+ if(score>=50)return["Dissatisfied","sat-bad"];
+ return["Very dissatisfied","sat-bad"]
+}
+function adjustRentalSat(r,delta,reason){
+ ensureRentalExperience(r);
+ r.satisfaction=Math.max(0,Math.min(100,Math.round(r.satisfaction+delta)));
+ r.satEvents.push({minute:state.minute,delta,reason});
+ state.satisfaction=Math.max(0,Math.min(100,Math.round(state.satisfaction+(delta/12))));
+}
+function waitMinutes(r){return Math.max(0,state.minute-(r.arrived??r.pickup))}
+function applyWaitExperience(r){
+ if(r.waitScored)return;
+ const w=waitMinutes(r);r.waitScored=true;
+ state.satisfactionMetrics.totalWait+=w;state.satisfactionMetrics.waitCount++;
+ if(w<=5)adjustRentalSat(r,3,`Quick counter wait (${w} min)`);
+ else if(w<=10)adjustRentalSat(r,0,`Acceptable counter wait (${w} min)`);
+ else if(w<=20)adjustRentalSat(r,-5,`Long counter wait (${w} min)`);
+ else adjustRentalSat(r,-12,`Very long counter wait (${w} min)`);
+}
+
+function vehicleMatch(r,v){
+ ensureRentalExperience(r);
+ const exact=v.class===r.class;
+ const rankDiff=(CLASS_RANK[v.class]||0)-(CLASS_RANK[r.class]||0);
+ let type=exact?"exact":rankDiff>0?"upgrade":"substitute";
+ let severity=0,reasons=[],reaction="";
+ if(exact){reasons.push("Reserved class matched");reaction=`That ${v.class.toLowerCase()} is exactly what I reserved.`}
+ else if(rankDiff>0){severity=1;reasons.push(`Free class upgrade from ${r.class} to ${v.class}`);reaction=`I reserved a ${r.class.toLowerCase()}, but the ${v.class.toLowerCase()} could work if the price stays the same.`}
+ else {severity=3;reasons.push(`Wrong class: reserved ${r.class}, offered ${v.class}`);reaction=`I reserved a ${r.class.toLowerCase()}. I wasn't expecting a ${v.class.toLowerCase()}.`}
+
+ const capacity=VEHICLE_CAPACITY[v.class]||5;
+ if(r.promise.party>capacity){severity=5;reasons.push(`Seats only ${capacity} for party of ${r.promise.party}`);reaction=`That won't work. There are ${r.promise.party} of us and we need enough seats.`}
+ if(r.promise.mustHave.includes("Cargo space")&&["Economy","Midsize","Full Size","Pickup"].includes(v.class)){severity=Math.max(severity,4);reasons.push("Does not meet cargo-space need");reaction=`We have a lot of luggage. I really need the SUV or minivan space I reserved.`}
+
+ const cp=customerProfile(r.customer.id);
+ if(cp?.preferences?.includes("Avoids Nissan")&&/Nissan/i.test(v.model)){severity=Math.max(severity,2);reasons.push("Conflicts with saved Nissan preference");reaction=`Do you have anything besides a Nissan? I had asked for that before.`}
+ if(cp?.preferences?.includes("Prefers newer vehicles")&&v.year<2026){severity=Math.max(severity,2);reasons.push("Older than customer preference")}
+ if(v.clean<70){severity=Math.max(severity,3);reasons.push(`Vehicle cleanliness only ${v.clean}%`)}
+ else if(v.clean<90){severity=Math.max(severity,2);reasons.push(`Vehicle needs touch-up (${v.clean}% clean)`)}
+ if(v.fuel<5){severity=Math.max(severity,2);reasons.push(`Low fuel (${v.fuel}/8)`)}
+ if((v.damage||[]).filter(d=>d.status!=="Repaired").length>=2){severity=Math.max(severity,2);reasons.push("Multiple existing damage items")}
+ return {exact,type,severity,reasons,reaction}
+}
+
+function assignmentImpact(r,v,match){
+ if(r.assignmentScoredFor===v.id)return;
+ r.assignmentScoredFor=v.id;
+ state.satisfactionMetrics.totalAssignments++;
+ if(match.exact){state.satisfactionMetrics.exactClass++;adjustRentalSat(r,5,"Received reserved vehicle class")}
+ else if(match.type==="upgrade"){adjustRentalSat(r,4,`Complimentary upgrade to ${v.class}`)}
+ else adjustRentalSat(r,-8,`Accepted substitute ${v.class} instead of reserved ${r.class}`);
+ if(v.clean>=95)adjustRentalSat(r,3,"Vehicle presented exceptionally clean");
+ else if(v.clean<70)adjustRentalSat(r,-8,"Vehicle was visibly dirty");
+ else if(v.clean<90)adjustRentalSat(r,-3,"Vehicle needed cleaning touch-up");
+ if(v.fuel>=7)adjustRentalSat(r,2,"Vehicle provided with near-full fuel");
+ else if(v.fuel<5)adjustRentalSat(r,-4,"Vehicle provided with low fuel");
+}
+
+window.handleVehiclePromise=(id)=>{
+ const r=selected(),v=state.fleet.find(x=>x.id===id);if(!r||!v)return;
+ ensureRentalExperience(r);applyWaitExperience(r);
+ state.selectedVehicle=id;
+ const m=vehicleMatch(r,v);
+ if(m.exact){
+   r.substitutionApproved=true;
+   assignmentImpact(r,v,m);
+   return startCoverageAfterMatch(r,v,m)
+ }
+ showVehicleMismatchConversation(r,v,m)
+}
+function startCoverageAfterMatch(r,v,m){
+ r.checkoutStage="coverage";r.customerCoverageRequest=null;r.coverageConfirmed=false;customerCoverageRequest(r);render();
+ showModal("Vehicle Match Confirmed",`<div class="match-card"><b>${m.exact?"Reserved class matched":"Customer accepted vehicle"}</b><br>Unit ${v.unit} — ${v.model} • ${v.class}</div>
+ <div class="office-convo"><b>${r.customer.name}:</b><br>"${m.reaction}"</div>
+ <div class="next-step"><strong>NEXT:</strong> Ask what coverage the customer wants.</div>
+ <button class="primary" onclick="showCheckoutCoverage()">Continue to Coverage →</button>`)
+}
+function showVehicleMismatchConversation(r,v,m){
+ const severe=m.severity>=4;
+ const hasCorrect=ready().some(x=>x.class===r.class&&x.id!==v.id);
+ state.satisfactionMetrics.complaints++;
+ showModal("Customer Questions the Vehicle",`
+ <div class="match-card ${severe?"bad":"warn"}"><b>Reservation Promise:</b> ${r.class}<br><b>Selected:</b> ${v.class} — ${v.model}<br>${m.reasons.join("<br>")}</div>
+ <div class="office-convo"><b>${r.customer.name}:</b><br><br>"${m.reaction}"</div>
+ <div class="promise-card"><b>Trip needs</b><br>${r.promise.reason} • ${r.promise.party} people • ${r.promise.luggage} luggage item(s)<br>${r.promise.mustHave.join(" • ")||"No special requirements"}</div>
+ <button class="primary" onclick="findCorrectVehicle()">Find Reserved ${r.class}</button>
+ ${!severe?`<button onclick="customerAcceptSubstitute('${v.id}','none')">Ask Customer to Accept Substitute</button>`:""}
+ <button onclick="customerAcceptSubstitute('${v.id}','discount')">Offer $25 Service Recovery</button>
+ ${m.type==="upgrade"?`<button onclick="customerAcceptSubstitute('${v.id}','freeupgrade')">Confirm Free Upgrade</button>`:""}
+ ${hasCorrect?"<p><small>A matching ready vehicle is available.</small></p>":"<p><small>No other matching ready vehicle is currently on the lot.</small></p>"}
+ `)
+}
+window.findCorrectVehicle=()=>{
+ const r=selected();if(!r)return;
+ state.selectedVehicle=null;vehicleFilter="available";
+ $("#modal").close();render();
+ showModal("Find Reserved Class",`Vehicle list is filtered back to <b>${r.class}</b>. Select a matching unit to protect the reservation promise.`)
+}
+window.customerAcceptSubstitute=(vid,recovery)=>{
+ const r=selected(),v=state.fleet.find(x=>x.id===vid);if(!r||!v)return;
+ const m=vehicleMatch(r,v);
+ if(m.severity>=5 && recovery!=="discount")return showModal("Vehicle Cannot Meet Trip Need",`This vehicle does not have enough capacity for the customer's trip. Choose a different vehicle.`);
+ r.substitutionApproved=true;
+ if(recovery==="discount"){
+   state.expensesToday.adjustments+=25;state.serviceRecoveries.push({date:state.date.toISOString(),customer:r.customer.name,amount:25,reason:`Vehicle substitution ${r.class} → ${v.class}`});
+   adjustRentalSat(r,5,"Manager offered $25 service recovery");
+ }
+ if(recovery==="freeupgrade")adjustRentalSat(r,3,"Manager clearly confirmed complimentary upgrade");
+ assignmentImpact(r,v,m);
+ $("#modal").close();startCoverageAfterMatch(r,v,m)
+}
+
+function satisfactionSummary(r){
+ ensureRentalExperience(r);const [label,cls]=satLabel(r.satisfaction);
+ return `<span class="sat-chip ${cls}">${r.satisfaction}/100 — ${label}</span>`
+}
+
+function reviewForRental(r,v,c){
+ if(r.reviewGenerated)return state.customerReviews.find(x=>x.reservationId===r.id);
+ const score=r.satisfaction;
+ let stars=score>=92?5:score>=80?4:score>=65?3:score>=45?2:1;
+ const negatives=r.satEvents.filter(e=>e.delta<0).sort((a,b)=>a.delta-b.delta).slice(0,2).map(e=>e.reason);
+ const positives=r.satEvents.filter(e=>e.delta>0).sort((a,b)=>b.delta-a.delta).slice(0,2).map(e=>e.reason);
+ let text;
+ if(stars>=5)text=`Great experience. ${positives[0]||"The branch made pickup easy"} and the vehicle worked well for my trip.`;
+ else if(stars===4)text=`Overall a good rental. ${positives[0]||"Service was helpful"}. ${negatives[0]?`The only issue was ${negatives[0].toLowerCase()}.`:""}`;
+ else if(stars===3)text=`The rental was okay, but ${negatives[0]?.toLowerCase()||"there were some service issues"}.`;
+ else text=`I was disappointed because ${negatives.join(" and ").toLowerCase()||"the rental did not match what I expected"}.`;
+ const review={id:uid(),reservationId:r.id,customerId:r.customer.id,customer:r.customer.name,vehicleId:v?.id,agreement:c?.number,stars,text,score,date:state.date.toISOString()};
+ state.customerReviews.unshift(review);r.reviewGenerated=true;
+ const p=customerProfile(r.customer.id);if(p){p.satisfactionHistory=p.satisfactionHistory||[];p.satisfactionHistory.push(score);p.history.push(`${state.date.toLocaleDateString()}: Left a ${stars}-star review — "${text}"`)}
+ return review
+}
+
+function satisfactionStats(){
+ const completed=state.customerReviews;
+ const avg=completed.length?Math.round(completed.reduce((a,x)=>a+x.score,0)/completed.length):state.satisfaction;
+ const exact=state.satisfactionMetrics.totalAssignments?Math.round(state.satisfactionMetrics.exactClass/state.satisfactionMetrics.totalAssignments*100):100;
+ const wait=state.satisfactionMetrics.waitCount?Math.round(state.satisfactionMetrics.totalWait/state.satisfactionMetrics.waitCount):0;
+ return {avg,exact,wait,reviews:completed.length,complaints:state.satisfactionMetrics.complaints}
+}
 
 function customerCoverageRequest(r){
  if(r.customerCoverageRequest)return r.customerCoverageRequest;
@@ -784,6 +960,31 @@ function protectionConversation(r){
  return lines.join("<br><br>")
 }
 window.deepProtection=()=>askCustomerCoverage()
+
+function closeReturnAgreement(v){
+ if(!v)return;
+ const c=state.contracts.find(x=>x.vehicleId===v.id&&String(x.status).includes("Returned"));
+ if(!c)return showModal("Return Agreement","No returned agreement is waiting to be closed for this vehicle.");
+ const r=state.reservations.find(x=>x.id===v.assignedRental)||state.reservations.find(x=>x.customer?.id===c.customerId);
+ if(!r)return showModal("Return Agreement","The rental record could not be found.");
+ const charges=c.returnCharges||{fuel:0,cleaning:0,late:0,damage:0};
+ const extra=Object.values(charges).reduce((a,n)=>a+(Number(n)||0),0);
+ c.finalTotal=(c.daily||r.rate||0)*(c.days||r.days||1)+extra;c.status="Closed";c.closedAt=fmtTime(state.minute);
+ if(charges.fuel>0)adjustRentalSat(r,-3,"Fuel charge at return");
+ if(charges.cleaning>0)adjustRentalSat(r,-6,"Heavy cleaning charge at return");
+ if(charges.damage>0)adjustRentalSat(r,-10,"Damage charge at return");
+ if(extra===0)adjustRentalSat(r,3,"Fast return with no added charges");
+ const cp=customerProfile(r.customer.id);
+ if(cp){cp.lifetimeSpend=(cp.lifetimeSpend||0)+c.finalTotal;cp.rentals=(cp.rentals||0)+1}
+ const review=reviewForRental(r,v,c);
+ v.status="Cleaning";v.cleanRemaining=Math.floor(12+Math.random()*25);v.keyLocation="Cleaning Bay";
+ if(!state.cleaningQueue.includes(v.id)&&!state.cleaningBays.includes(v.id))state.cleaningQueue.push(v.id);
+ fillCleaningBays();addHistory(v,`Agreement ${c.number} closed. Customer satisfaction ${r.satisfaction}/100; review ${review.stars} stars.`);
+ render();
+ const stars="★".repeat(review.stars)+"☆".repeat(5-review.stars);
+ showModal("Final Receipt & Customer Review",`<h3>${c.number} — ${r.customer.name}</h3><p>Final total: <b>${money(c.finalTotal)}</b></p><p>${satisfactionSummary(r)}</p><div class="review-card"><div class="review-stars">${stars}</div><b>${review.stars}-star customer review</b><p>"${review.text}"</p></div>`)
+}
+
 window.openReturnDesk=id=>{let v=state.fleet.find(x=>x.id===id);if(!v)return;let c=state.contracts.find(x=>x.vehicleId===v.id&&String(x.status).includes("Returned"));showModal("Return Desk",`<h2>Unit ${v.unit} — ${v.model}</h2><p>Mileage ${v.miles.toLocaleString()} • Fuel ${v.fuel}/8 • Cleanliness ${v.clean}%</p><p>${c?`Agreement ${c.number}<br>Fuel charge ${money(c.returnCharges?.fuel||0)} • Cleaning ${money(c.returnCharges?.cleaning||0)}`:"No returned agreement found."}</p><button onclick="closeReturnAgreementById('${v.id}')">Close Agreement & Print Receipt</button>`)}
 window.closeReturnAgreementById=id=>{let v=state.fleet.find(x=>x.id===id);$("#modal").close();closeReturnAgreement(v)}
 
@@ -882,7 +1083,7 @@ function applyOperatingCosts(mins){
 }
 function autoSnapshot(reason="Auto"){
  try{
-   const snap=JSON.stringify({...state,running:false});
+   const snap=JSON.stringify({...state,running:false,autoSaves:[]});
    state.autoSaves.unshift({time:new Date().toISOString(),gameDate:state.date.toISOString(),minute:state.minute,reason,data:snap});
    state.autoSaves=state.autoSaves.slice(0,5);
    localStorage.setItem("horizonRentalManager_autorecovery",JSON.stringify(state.autoSaves));
@@ -890,7 +1091,7 @@ function autoSnapshot(reason="Auto"){
 }
 window.showRecovery=()=>{
  let snaps=state.autoSaves||[];if(!snaps.length){try{snaps=JSON.parse(localStorage.getItem("horizonRentalManager_autorecovery")||"[]")}catch(e){}}
- if(!snaps.length)return showModal("Recovery Snapshots","No automatic recovery snapshots are available yet.");
+ if(!snaps.length)return showModal("Recovery Snapshots","No automatic recovery snapshots are available yet.");state.autoSaves=snaps;
  showModal("Recovery Snapshots",snaps.map((s,i)=>`<p><b>${new Date(s.time).toLocaleString()}</b> — ${s.reason}<br>Game time ${fmtTime(s.minute)} <button onclick="restoreSnapshot(${i})">Restore</button></p>`).join(""))
 }
 window.restoreSnapshot=i=>{
@@ -984,7 +1185,7 @@ function endOfDayReport(){
 
 function renderOtherScreens(){
  try {
- $("#dashboardContent").innerHTML=`<h2>Branch Dashboard</h2><div class="card-grid"><div class="simple-card"><b>Fleet Utilization</b><h1>${utilization()}%</h1></div><div class="simple-card"><b>Customer Satisfaction</b><h1>${state.satisfaction}%</h1></div><div class="simple-card"><b>Ready Vehicles</b><h1>${ready().length}</h1></div><div class="simple-card"><b>Queue</b><h1>${waiting().length}</h1></div></div>`;
+ $("#dashboardContent").innerHTML=`<h2>Branch Dashboard</h2><div class="card-grid"><div class="simple-card"><b>Fleet Utilization</b><h1>${utilization()}%</h1></div><div class="simple-card"><b>Customer Satisfaction</b><h1>${state.satisfaction}%</h1></div><div class="simple-card"><b>Ready Vehicles</b><h1>${ready().length}</h1></div><div class="simple-card"><b>Queue</b><h1>${waiting().length}</h1></div><div class="simple-card"><b>Exact-Class Fulfillment</b><h1>${satisfactionStats().exact}%</h1></div></div>`;
  $("#reservationContent").innerHTML=`<h2>Reservations</h2><table class="data-table"><thead><tr><th>Time</th><th>Customer</th><th>Class</th><th>Days</th><th>Status</th><th>Assigned</th></tr></thead><tbody>${state.reservations.map(r=>`<tr><td>${fmtTime(r.pickup)}</td><td>${r.customer.name}</td><td>${r.class}</td><td>${r.days}</td><td>${r.status}</td><td>${r.assignedVehicle?state.fleet.find(v=>v.id===r.assignedVehicle)?.unit:""}</td></tr>`).join("")}</tbody></table>`;
  $("#fleetContent").innerHTML=`<h2>Fleet</h2><table class="data-table"><thead><tr><th>Unit</th><th>Vehicle</th><th>Class</th><th>Miles</th><th>Fuel</th><th>Status</th></tr></thead><tbody>${state.fleet.map(v=>`<tr onclick="vehicleDetails('${v.id}')"><td>${v.unit}</td><td>${v.model}</td><td>${v.class}</td><td>${v.miles.toLocaleString()}</td><td>${v.fuel}/8</td><td>${v.status}</td></tr>`).join("")}</tbody></table>`;
  $("#employeeContent").innerHTML=`<h2>Employees</h2><div class="card-grid">${state.employees.map(e=>`<div class="simple-card"><h3>${e.name} ${e.auto?'<span class="employee-auto">AUTO</span>':''}</h3><b>${e.role}</b><p>${e.status} • ${e.task}</p><p>Sales ${e.sales}% • Service ${e.service}%</p><p>${e.years||0} years • ${money(e.pay||0)}/hr • Attendance ${e.attendance||90}%</p><small>${(e.history||[]).slice(0,3).join("<br>")}</small><br><button onclick="employeeOffice(\'${e.name}\')">Meet in Office</button></div>`).join("")}</div>`;
@@ -996,6 +1197,9 @@ function renderOtherScreens(){
  <div class="simple-card"><b>Branch Profit</b><h1>${money(branchProfit())}</h1></div>
  <div class="simple-card"><b>Utilization</b><h1>${utilization()}%</h1></div>
  </div>
+ <h3>Customer Experience</h3>
+ ${(()=>{const x=satisfactionStats();return `<div class="metric-grid"><div class="simple-card"><b>Customer Satisfaction</b><h1>${x.avg}%</h1></div><div class="simple-card"><b>Exact-Class Fulfillment</b><h1>${x.exact}%</h1></div><div class="simple-card"><b>Avg. Counter Wait</b><h1>${x.wait} min</h1></div><div class="simple-card"><b>Vehicle Complaints</b><h1>${x.complaints}</h1></div></div>`})()}
+ <h3>Recent Customer Reviews</h3>${state.customerReviews.slice(0,8).map(rv=>`<div class="review-card"><span class="review-stars">${"★".repeat(rv.stars)}${"☆".repeat(5-rv.stars)}</span> <b>${rv.customer}</b><p>${rv.text}</p></div>`).join("")||"<p>No completed rental reviews yet.</p>"}
  <h3>Today's Cost Breakdown</h3>
  <table class="data-table"><tbody>${Object.entries(state.expensesToday||{}).map(([k,v])=>`<tr><td>${k[0].toUpperCase()+k.slice(1)}</td><td>${money(v)}</td></tr>`).join("")}</tbody></table>
  <h3>Recent Daily History</h3><table class="data-table"><thead><tr><th>Date</th><th>Rentals</th><th>Revenue</th><th>Profit</th><th>Sat.</th><th>Util.</th></tr></thead>
@@ -1020,7 +1224,7 @@ function renderOtherScreens(){
  ensureCustomerProfiles();
  $("#customersContent").innerHTML=`<h2>Customer CRM</h2><div class="customer-grid">${state.customerProfiles.map(p=>`<div class="customer-card ${p.loyalty==="Emerald Elite"?"vip":""}">
  <h3>${p.name} ${p.dnr?'<span class="dnr-badge">DNR</span>':p.loyalty!=="None"?`<span class="loyalty-badge">${p.loyalty}</span>`:""}</h3>
- <p>${p.favoriteClass} • ${p.rentals+rentalCount(p.id)} rentals<br>${money(p.lifetimeSpend)} lifetime spend</p>
+ <p>${p.favoriteClass} • ${p.rentals+rentalCount(p.id)} rentals<br>${money(p.lifetimeSpend)} lifetime spend<br>Avg satisfaction: ${p.satisfactionHistory?.length?Math.round(p.satisfactionHistory.reduce((a,n)=>a+n,0)/p.satisfactionHistory.length)+"%":"—"}</p>
  <p>${p.preferences.join(" • ")||"No saved preferences"}</p><button onclick="openCustomerProfile('${p.id}')">Open Profile</button></div>`).join("")}</div>`;
  $("#agreementsContent").innerHTML=`<h2>Rental Agreements</h2><table class="history-table"><thead><tr><th>Agreement</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Daily</th><th>Payment</th></tr></thead><tbody>
  ${state.contracts.map(c=>`<tr><td>${c.number}</td><td>${c.customer}</td><td>${c.vehicle}</td><td>${c.status}</td><td>${money(c.daily||0)}</td><td>${c.status==="Closed"?"Finalized":"Authorized"}</td></tr>`).join("")||"<tr><td colspan='6'>No agreements yet.</td></tr>"}</tbody></table>
@@ -1064,7 +1268,7 @@ function renderOtherScreens(){
  } catch(err) {
    console.error("Secondary screen render error:",err);
    const ops=$("#operationsContent");
-   if(ops) ops.innerHTML=`<h2>Live Branch Operations</h2><div class="ops-card"><h3>Operations Recovery</h3><p>The game repaired missing data from an older save. Reload this screen once. If this message remains, start a new v0.9.4 game.</p><pre>${String(err.message||err)}</pre></div>`;
+   if(ops) ops.innerHTML=`<h2>Live Branch Operations</h2><div class="ops-card"><h3>Operations Recovery</h3><p>The game repaired missing data from an older save. Reload this screen once. If this message remains, start a new v0.10.0 game.</p><pre>${String(err.message||err)}</pre></div>`;
  }
 
 }
@@ -1130,18 +1334,8 @@ function startTimer(){
 }
 
 
-/* v0.9.3 checkout controller — intentionally overrides older checkout handlers */
-window.selectVehicle=id=>{
- const r=selected(),v=state.fleet.find(x=>x.id===id);
- if(!r||!v)return;
- state.selectedVehicle=id;
- r.checkoutStage="coverage";
- r.customerCoverageRequest=null;
- r.coverageConfirmed=false;
- customerCoverageRequest(r);
- render();
- showCheckoutCoverage(r,v);
-};
+/* v0.10.0 checkout controller — reservation promise and satisfaction aware */
+window.selectVehicle=id=>window.handleVehiclePromise(id);
 
 window.showCheckoutCoverage=(r=selected(),v=state.fleet.find(x=>x.id===state.selectedVehicle))=>{
  if(!r||!v)return;
@@ -1237,6 +1431,7 @@ $("#speedSelect").onchange=()=>{state.simSpeed=$("#speedSelect").value;if(state.
 $("#nextDayBtn").onclick=()=>{state.running=false;stopTimer();nextDay()};
 $("#saveBtn").onclick=()=>{localStorage.setItem(SAVE_KEY,JSON.stringify({...state,date:state.date.toISOString()}));showModal("Game Saved","Your branch was saved in this browser.")};
 $("#loadBtn").onclick=()=>{let raw=localStorage.getItem(SAVE_KEY)
+ ||localStorage.getItem("horizonRentalManager_v094")
  ||localStorage.getItem("horizonRentalManager_v093")
  ||localStorage.getItem("horizonRentalManager_v092")
  ||localStorage.getItem("horizonRentalManager_v091")
@@ -1250,7 +1445,7 @@ $("#loadBtn").onclick=()=>{let raw=localStorage.getItem(SAVE_KEY)
  ||localStorage.getItem("horizonRentalManager_v050")
  ||localStorage.getItem("horizonRentalManager_v041")
  ||localStorage.getItem("horizonRentalManager_v040");
- if(!raw)return showModal("Load Game","No compatible Horizon Rental Manager save was found.");state=migrateState(JSON.parse(raw));state.running=false;stopTimer();render();showModal("Game Loaded","Your branch save has been upgraded and restored for v0.9.4.")};
+ if(!raw)return showModal("Load Game","No compatible Horizon Rental Manager save was found.");state=migrateState(JSON.parse(raw));state.running=false;stopTimer();render();showModal("Game Loaded","Your branch save has been upgraded and restored for v0.10.0.")};
 $("#confirmAssignmentBtn").onclick=()=>{if(state.selectedVehicle)beginCheckoutFlow()};
 $("#viewInventoryBtn").onclick=()=>{$$(".nav-btn").find(b=>b.dataset.screen==="fleet").click()};
 $("#officePhone").onclick=answerPhone;

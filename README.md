@@ -1,8 +1,8 @@
-# Horizon Rental Manager v0.9.4
+# Horizon Rental Manager v0.10.0
 
 This version redesigns the actual game around a national rental-car branch workflow.
 
-## Major v0.9.4 changes
+## Major v0.10.0 changes
 - Main gameplay screen now resembles a real rental branch operating dashboard.
 - Customer queue on the left with wait time and next-hour arrivals.
 - Selected customer physically appears at the desk with changing dialogue.
@@ -31,7 +31,7 @@ Replace the existing files in your `rental` repository with:
 Then commit the changes. GitHub Pages will update automatically.
 
 
-## v0.9.4 stability fixes
+## v0.10.0 stability fixes
 - Simulation time is dramatically slower.
 - Normal speed is 1 game minute every 2.5 real seconds.
 - Slow speed is 1 game minute every 5 real seconds.
@@ -48,7 +48,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Vehicle availability is rechecked when the rental is finalized.
 
 
-## v0.9.4 — Required customer walk-around
+## v0.10.0 — Required customer walk-around
 - Assigning a vehicle no longer means the customer immediately drives away.
 - The rental agreement is created first, then the exact vehicle moves to `Walk-Around`.
 - A customer walk-around is required before the car becomes `Rented`.
@@ -62,7 +62,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Return processing now compares return condition to the checkout walk-around.
 - New return damage is permanently added to that exact vehicle's history and marked as return damage.
 
-## v0.9.4 — Time speed correction
+## v0.10.0 — Time speed correction
 - The day now starts on Slow speed.
 - Slow: 1 game minute every 60 real seconds.
 - Normal: 1 game minute every 30 real seconds.
@@ -70,7 +70,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Manual +5 and +15 minute buttons remain available when you want to move ahead quickly.
 
 
-## v0.9.4 — Living branch operations expansion
+## v0.10.0 — Living branch operations expansion
 - Autonomous rental agents can serve customers while you manage the branch.
 - Service staff move returned cars into the cleaning workflow.
 - Live manager phone calls: rental extensions, insurance replacement rentals, body-shop referrals, roadside calls, and inter-branch transfer requests.
@@ -88,7 +88,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Career progression foundation.
 - Existing damage/walk-around history remains permanently tied to each vehicle.
 
-## v0.9.4 — Clock engine fix
+## v0.10.0 — Clock engine fix
 - Replaced the repeating interval clock with a single self-scheduling timeout.
 - A timer token prevents old/duplicate clock loops from continuing in the background.
 - Slow is now exactly one game minute after 60 real seconds.
@@ -97,14 +97,14 @@ Then commit the changes. GitHub Pages will update automatically.
 - Added a visible countdown showing exactly how many real seconds remain until the next game minute.
 - Added cache-busting version strings to app.js and style.css so GitHub Pages does not keep serving an older, faster JavaScript file.
 
-## v0.9.4 — Operations screen repair
+## v0.10.0 — Operations screen repair
 - Fixed the blank Operations page caused by older saves missing v0.6 fields.
 - Added a save migration layer that fills in phone queue, DNR, overdue, accounts, branches, career, employee history, vehicle key data, and other newer state automatically.
 - Older v0.4–v0.6.1 browser saves can now be loaded and upgraded.
 - Operations rendering is now defensive so one missing field cannot blank the whole page.
-- Updated cache-busting to v0.9.4.
+- Updated cache-busting to v0.10.0.
 
-## v0.9.4 — Daily operations simulation
+## v0.10.0 — Daily operations simulation
 - New Daily Planner screen with an hourly 7 AM–7 PM timeline.
 - Pickups, projected returns, staffing, cleaning capacity, and projected class shortages are visible by hour.
 - One-click inter-branch transfer requests from shortage cards.
@@ -120,7 +120,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Recovery screen allows restoring one of the latest snapshots.
 - Keyboard shortcut P opens the Daily Planner.
 
-## v0.9.4 — Deep customers, agreements, vehicles, and employees
+## v0.10.0 — Deep customers, agreements, vehicles, and employees
 - New persistent Customer CRM with loyalty, rental count, lifetime spend, preferences, complaints, notes, and DNR status.
 - Customer preferences can affect satisfaction and vehicle-assignment outcomes.
 - Protection is now presented as a customer conversation rather than only checkboxes.
@@ -136,7 +136,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Career XP now grows with daily performance and can unlock internal management opportunities.
 - Calendar-year rollover increases employee tenure and depreciates fleet value.
 
-## v0.9.4 — Physical branch & living-world update
+## v0.10.0 — Physical branch & living-world update
 - New Manager Office screen with clickable computer, phone, inbox, whiteboard, window, and calendar.
 - Employees can knock on the manager's door with customer, scheduling, pay, and vehicle problems.
 - New physical Parking Lot with numbered Ready, Return, Cleaning, Maintenance, and Overflow spaces.
@@ -149,7 +149,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Area Manager mode oversees Warsaw, Columbia City, Goshen, Fort Wayne Airport, and Fort Wayne Downtown.
 - The world layer is connected to the existing planner, fleet, employees, financials, customer CRM, agreements, cleaning, maintenance, and recovery systems.
 
-## v0.9.4 — Coverage conversation & guided rental flow
+## v0.10.0 — Coverage conversation & guided rental flow
 - Customers now explicitly tell the rental agent which protection/coverage options they want.
 - Customer requests include LDW only, LDW + roadside, full protection, roadside only, or declining all optional coverage.
 - One button applies exactly what the customer requested; the full product screen remains available for changes.
@@ -158,7 +158,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - After payment authorization and signature, the game explicitly directs the manager to Start Vehicle Walk-Around.
 - The intended transaction flow is now: customer coverage choice → exact vehicle → agreement → payment authorization → signature → walk-around → release vehicle.
 
-## v0.9.4 — Automatic checkout flow fix
+## v0.10.0 — Automatic checkout flow fix
 - Selecting a vehicle now immediately starts checkout.
 - The renter first tells you exactly which coverage/protection they want.
 - Applying the customer's requested coverage automatically opens the rental agreement.
@@ -169,7 +169,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Fixed the older protection-conversation handler that could override the new customer coverage request.
 - Added save migration support for v0.7.0, v0.8.0, v0.9.0 and v0.9.1.
 
-## v0.9.4 — Checkout controller rebuild
+## v0.10.0 — Checkout controller rebuild
 - Rebuilt the vehicle-selection checkout handoff instead of layering another patch on the old protection system.
 - Selecting a vehicle now resets that rental's checkout stage and immediately generates the renter's coverage preference.
 - The renter's exact requested coverage is displayed in her speech bubble and in a dedicated checkout modal.
@@ -179,7 +179,7 @@ Then commit the changes. GitHub Pages will update automatically.
 - Changing coverage or declining all also opens the agreement automatically when a vehicle is already selected.
 - Added migration for v0.9.2 saves.
 
-## v0.9.4 — Core button/Manager Office stability repair
+## v0.10.0 — Core button/Manager Office stability repair
 - Restored the missing renderKpis() function that was crashing every full UI refresh.
 - Because that crash happened after clicks, it made many unrelated buttons appear broken and prevented secondary screens such as Manager Office from rendering.
 - The main render loop is now fail-soft: a problem in one panel no longer stops the rest of the game from updating.
@@ -187,3 +187,21 @@ Then commit the changes. GitHub Pages will update automatically.
 - The facility Manager Office button now opens the real Manager Office screen instead of a generic informational popup.
 - Added a visible Office Is Live status card.
 - Updated save migration to include v0.9.3.
+
+## v0.10.0 — Reservation Promise & Customer Satisfaction
+- Every active rental now has an individual 0–100 satisfaction score and a permanent event history.
+- Customer trip needs are generated from the reservation: trip purpose, party size, luggage, and must-have space requirements.
+- Vehicle selection now checks the reserved class before checkout can continue.
+- Exact-class matches improve satisfaction.
+- Free upgrades can improve satisfaction.
+- Wrong-class vehicles trigger an actual customer conversation instead of silently being accepted.
+- Customers can reject substitutions that do not meet seating/cargo needs.
+- Managers can find the reserved class, ask the customer to accept a substitute, confirm a complimentary upgrade, or offer a $25 service recovery.
+- Counter wait time, cleanliness, fuel level, saved vehicle preferences, and walk-around condition affect satisfaction.
+- Return charges can change satisfaction at the end of the rental.
+- Completed rentals generate a realistic 1–5 star review based on the actual satisfaction events from that rental.
+- Customer CRM profiles now retain satisfaction history and review history.
+- Reports now track exact-class fulfillment, average counter wait, vehicle complaints, customer satisfaction, and real generated reviews.
+- Added service-recovery costs to branch expenses.
+- Restored a missing closeReturnAgreement() path so the Return Desk can actually finalize rentals and print a review/receipt.
+- Fixed autosave snapshot recursion and recovery-list restoration while updating the stability layer.
