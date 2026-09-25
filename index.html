@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Strip Mall Tycoon V17.0 — Visual Command Center</title><link rel="manifest" href="manifest.json"><style>
+<title>Strip Mall Tycoon V17.1 — Work Order & Approval Cleanup</title><link rel="manifest" href="manifest.json"><style>
 *{box-sizing:border-box}body{margin:0;font:14px system-ui;background:#14202b;color:#f4f6f8}header{position:sticky;top:0;z-index:5;background:#0d151d;padding:10px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}h1{font-size:18px;margin:0;color:#f3c34d}button,select{background:#34495e;color:#fff;border:1px solid #61798e;border-radius:8px;padding:7px 9px;cursor:pointer}main{display:grid;grid-template-columns:2.1fr .9fr;gap:10px;padding:10px}.mall{min-height:630px;border-radius:15px;position:relative;overflow:hidden;padding:145px 15px 15px;background:linear-gradient(#86b9dc 0 36%,#668d51 36% 43%,#42464a 43%)}.mall.night{filter:brightness(.68)}.sign{position:absolute;left:22px;top:35px;background:#eee;color:#222;border:7px solid #765b3c;padding:10px 20px;font-size:22px;font-weight:900}.weather{position:absolute;right:15px;top:15px;background:#111b;padding:7px 11px;border-radius:20px}.decor{position:absolute;top:92px;left:0;right:0;text-align:center;font-size:24px}.stores{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.store{background:#c8af86;border:4px solid #635341;min-height:180px;position:relative;cursor:pointer;padding-top:50px;box-shadow:inset 0 -42px #2c3135}.store.anchor{grid-column:span 2}.store.temp{outline:4px dashed #f3c34d}.store.vacant{filter:grayscale(.8);opacity:.75}.awning{position:absolute;top:0;left:0;right:0;background:#eee;color:#222;font-weight:800;text-align:center;padding:8px 3px;min-height:43px}.vacant .awning{background:#ffe59a}.window{height:52px;margin:6px 10px;background:#a7d4e7;border:4px solid #333}.door{height:68px;width:38px;margin:auto;background:#8eb5c8;border:4px solid #333}.construction:after{content:"🚧";position:absolute;inset:45px 0 0;display:grid;place-items:center;font-size:42px;background:#0006}.parking{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;margin-top:28px}.car{height:27px;border-radius:10px 10px 4px 4px;background:#aaa;border:2px solid #222}.truck{height:32px;background:#ddd;border:2px solid #222}aside{background:#21313e;border-radius:15px;padding:10px;max-height:calc(100vh - 80px);overflow:auto}.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}.tabs button{font-size:11px;padding:5px}.card{background:#2b3e4d;border-radius:10px;padding:10px;margin-bottom:8px}.card h3{margin:0 0 7px;color:#f3c34d}.log{padding:6px 0;border-bottom:1px solid #ffffff17;font-size:12px}.muted,small{color:#bdc9d3}.good{color:#6ed99a}.bad{color:#ff837a}.row{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.pill{display:inline-block;background:#15222d;padding:2px 6px;border-radius:10px;font-size:11px;margin:1px}.map{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.property{background:#334b5d;border:2px solid #678196;border-radius:9px;padding:10px;cursor:pointer}.modal{display:none;position:fixed;inset:0;background:#000b;z-index:9;align-items:center;justify-content:center;padding:16px}.modalbox{background:#263947;border-radius:14px;padding:17px;width:min(760px,100%);max-height:92vh;overflow:auto}.bar{height:7px;background:#14212b;border-radius:8px;overflow:hidden}.bar i{height:100%;display:block;background:#6ed99a}.archiveShot{border:1px solid #5f7688;border-radius:8px;padding:8px;margin:6px 0}.office{position:absolute;right:20px;bottom:60px;background:#20303d;border:2px solid #70899c;padding:7px;border-radius:7px;font-size:11px}
 
 .life{position:absolute;inset:0;pointer-events:none}.personDot{position:absolute;font-size:18px;transition:left .8s,top .8s}.bubble{position:absolute;background:#fff;color:#222;padding:5px 8px;border-radius:12px;font-size:11px;max-width:155px;box-shadow:0 2px 8px #0006;pointer-events:auto;cursor:pointer}.statusline{position:absolute;left:15px;top:12px;background:#111b;padding:6px 9px;border-radius:12px;font-size:11px}.leaseBox label{display:block;margin:8px 0}.leaseBox input{width:130px;padding:6px;border-radius:6px;border:1px solid #789;background:#15222d;color:white}.source{border-left:3px solid #f3c34d;padding-left:8px;margin:7px 0}
@@ -51,7 +51,7 @@
 .v17pm{position:fixed;right:18px;bottom:48px;z-index:60;background:#263f4d;border:1px solid #82a9bc;border-radius:12px;padding:8px 10px;box-shadow:0 4px 18px #0008}
 @media(max-width:900px){.v17top{grid-template-columns:repeat(4,1fr)}.v17layout{grid-template-columns:1fr}.v17drawer{position:static;max-height:none}}
 </style></head><body>
-<header><h1>🏬 Strip Mall Tycoon V17.0 — Visual Command Center</h1><span>📅 <b id=d></b></span><span>💵 <b id=c></b></span><span>🏢 <b id=pname></b></span><button id=pauseBtn onclick=toggleTime()>▶ Run</button><select onchange="speed=+this.value;restartTimer()"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select><button onclick=advanceWeek()>Skip Week</button><button onclick="goTab('desk')">🏬 Command Center</button><button onclick=openAboveView()>🗺 Above View</button><span style="font-size:11px;color:#bdc9d3">Autosave ✓</span><button onclick="night=!night;render()">🌙 Night</button><button onclick=save()>Save</button><button onclick=load()>Load</button><button onclick=newGame()>New</button></header>
+<header><h1>🏬 Strip Mall Tycoon V17.1 — Work Order & Approval Cleanup</h1><span>📅 <b id=d></b></span><span>💵 <b id=c></b></span><span>🏢 <b id=pname></b></span><button id=pauseBtn onclick=toggleTime()>▶ Run</button><select onchange="speed=+this.value;restartTimer()"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select><button onclick=advanceWeek()>Skip Week</button><button onclick="goTab('desk')">🏬 Command Center</button><button onclick=openAboveView()>🗺 Above View</button><span style="font-size:11px;color:#bdc9d3">Autosave ✓</span><button onclick="night=!night;render()">🌙 Night</button><button onclick=save()>Save</button><button onclick=load()>Load</button><button onclick=newGame()>New</button></header>
 <main><section class=mall id=mall><div class=weather id=weather></div><div class=decor id=decor></div><div class=sign id=sign></div><div class=stores id=stores></div><div class=parking id=parking></div><div class=office id=office></div><div class=life id=life></div><div class=statusline id=statusline></div></section>
 <aside><div class=tabs><button onclick="goTab('desk')">Desk</button><button onclick="goTab('tenants')">Tenants</button><button onclick="goTab('leasing')">Leasing</button><button onclick="goTab('ops')">Ops</button><button onclick="goTab('town')">Town</button><button onclick="goTab('money')">Money</button><button onclick="goTab('archive')">Archive</button><button onclick="goTab('legacy')">Legacy</button></div><div id=side></div></aside></main>
 <div class=modal id=modal onclick="if(event.target===this)closeModal()"><div class=modalbox id=modalbox onclick="event.stopPropagation()"></div></div>
@@ -498,7 +498,7 @@ function actionItemsV153(){
    let detail=`${x.area||"Property"}${x.from?` · reported by ${x.from}`:""} · Needs inspection`;
    push(82,"🔧 Maintenance",title,detail,`goSeeFinding(${i})`);
  });
- let jobs=allOpenWorkOrders();
+ let jobs=meaningfulOpenWOsV171().legacy.slice(0,25);
  jobs.forEach(w=>{
    let title=w.title||w.summary||"Open work order";
    let detail=`${woStatusLabel(w)}${w.cost?` · ${money(w.cost)}`:""}${w.assigned?` · ${w.assigned}`:""}`;
@@ -514,7 +514,7 @@ function actionItemsV153(){
  (G.v155?.promises||[]).filter(x=>x.status==="Open").forEach(x=>push(64,"🤝 Promise",P().stores[x.tenant]?.name||"Tenant",x.text,"goTab('desk')"));
  (G.v16?.workOrders||[]).filter(w=>w.status!=="Closed").forEach(w=>push(w.status==="Quotes Received"?74:w.priority==="Emergency"?95:56,"🧾 WO "+w.id,w.title,`${w.status}${w.vendor?` · ${w.vendor}`:""}`,`openDetailedWOV16('${w.id}')`));
 rentActionItemsV16().forEach(x=>push(x.r.daysLate>=60?90:x.r.daysLate>=30?78:65,"💵 Rent",`${x.t?.name||"Tenant"} — ${money(x.r.balance)} due`,`${x.r.daysLate} days late · ${x.r.status}`,`openTenantCollectionsV16(${x.i})`));
-pmGenerateRequestsV161();(G.v161?.requests||[]).filter(r=>r.status==="Pending").forEach(r=>push(r.cost>G.v161.pm.approvalLimit?86:68,"👩‍💼 PM Approval",r.title,r.detail,`openPMRequestV161(${r.id})`));
+pmGenerateRequestsV161();(G.v161?.requests||[]).filter(r=>r.status==="Pending").forEach(r=>push(r.cost>G.v161.pm.approvalLimit?86:68,"👩‍💼 PM Approval",r.title,r.detail,`openPMRequestV171(${r.id})`));
 greaseActionItemsV162().forEach(x=>push(x.urgent?92:72,"🛢 Grease",`${x.t.name} grease service needed`,`${x.lvl}% full · ${G.v162.greaseContracts[x.i]?G.v162.greaseContracts[x.i].vendor+" contract active":"No recurring contractor"}`,`greaseServiceV162(${x.i})`));
 let active=P().expansion?.phases?.find(x=>x.status==="Construction");if(active)push(52,"🏗 Construction",active.name,`${active.weeks} weeks remaining`,"expansionHistory()");
  return a.sort((x,y)=>y.pri-x.pri);
@@ -830,7 +830,7 @@ function pmGenerateRequestsV161(){
  });
  // Unread important mail
  (G.v15.mail||[]).filter(m=>!m.read).slice(0,2).forEach(m=>{
-   if(/Insurance|Property Tax|City|Vendor Invoice/i.test(m.from+" "+m.subject))pmRequestV161("Administrative",`${m.from}: owner review requested`,m.subject,0,["Review mail","Delegate paperwork"]);
+   if(/Insurance|Property Tax|City|Vendor Invoice/i.test(m.from+" "+m.subject))pmRequestV161("Administrative",`${m.from}: ${m.subject||"correspondence needs review"}`,`${m.text||m.body||m.subject||"Important correspondence received."} I need to know whether you want me to handle the response/follow-up or keep it for your review.`,0,["Review correspondence","Delegate response","Keep for owner"]);
  });
  // Weather / snow
  if((G.v13?.snow?.depth||0)>3)pmRequestV161("Weather","Snow service decision",`${G.v13.snow.depth}" on site. Lot is ${G.v13.snow.plowed}% plowed and ${G.v13.snow.salt}% salted.`,650,["Authorize plow","Delegate snow response","Wait"]);
@@ -841,19 +841,19 @@ function pmGenerateRequestsV161(){
 }
 function pmApprovalDeskHTMLV161(){
  v161Init();pmGenerateRequestsV161();let V=G.v161,p=V.requests.filter(x=>x.status==="Pending"),urgent=p.filter(x=>x.cost>V.pm.approvalLimit||/Collections|Inspection/.test(x.type)).length;
- return`<div class="card ${urgent?"emergency":""}"><h3>👩‍💼 Property Manager — Approval Desk ${p.length?`(${p.length})`:""}</h3><p>${V.pm.name} · approval authority ${money(V.pm.approvalLimit)} · ${urgent} needing owner attention</p>${p.slice(0,5).map(r=>`<div class=log><b>${r.type} · ${r.title}</b><br><small>${r.detail}</small>${r.cost?`<br>${money(r.cost)}`:""}<div class=row><button onclick="openPMRequestV161(${r.id})">Review</button><button onclick="quickDelegateV161(${r.id})">Delegate</button></div></div>`).join("")||"<p class=good>✓ Property manager has nothing waiting for your approval.</p>"}<button onclick=openPMDeskV161()>Open Manager Desk</button> <button onclick=pmAuthorityV161()>Approval Authority</button></div>`
+ return`<div class="card ${urgent?"emergency":""}"><h3>👩‍💼 Property Manager — Approval Desk ${p.length?`(${p.length})`:""}</h3><p>${V.pm.name} · approval authority ${money(V.pm.approvalLimit)} · ${urgent} needing owner attention</p>${p.slice(0,5).map(r=>`<div class=log><b>${r.type} · ${r.title}</b><br><small>${r.detail}</small>${r.cost?`<br>${money(r.cost)}`:""}<div class=row><button onclick="openPMRequestV171(${r.id})">Review</button><button onclick="quickDelegateV161(${r.id})">Delegate</button></div></div>`).join("")||"<p class=good>✓ Property manager has nothing waiting for your approval.</p>"}<button onclick=openPMDeskV171()>Open Manager Desk</button> <button onclick=pmAuthorityV161()>Approval Authority</button></div>`
 }
 function openPMDeskV161(){
  v161Init();pmGenerateRequestsV161();let V=G.v161;
  modal.style.display="flex";modalbox.style.width="min(1000px,96vw)";
- modalbox.innerHTML=`<h2>👩‍💼 ${V.pm.name} — Manager Desk</h2><p>These are items the property manager cannot or should not decide alone. Routine items can be delegated back to her.</p><h3>Waiting for You</h3>${V.requests.filter(x=>x.status==="Pending").map(r=>`<div class=log><b>#${r.id} · ${r.type} · ${r.title}</b><br>${r.detail}${r.cost?`<br><b>Financial exposure:</b> ${money(r.cost)}`:""}<div class=row><button onclick="openPMRequestV161(${r.id})">Review</button><button onclick="quickDelegateV161(${r.id})">Delegate</button></div></div>`).join("")||"<p class=good>Nothing waiting.</p>"}<h3>Delegated to Manager</h3>${V.delegated.slice(0,8).map(r=>`<div class=log><b>${r.title}</b><br>${r.detail}<br><small>Status: ${r.status}</small></div>`).join("")||"<p>None.</p>"}<h3>Recent Decisions</h3>${V.completed.slice(0,8).map(r=>`<div class=log><b>${r.title}</b><br>${r.decision}</div>`).join("")||"<p>None.</p>"}<button onclick=closeModal()>Close</button>`
+ modalbox.innerHTML=`<h2>👩‍💼 ${V.pm.name} — Manager Desk</h2><p>These are items the property manager cannot or should not decide alone. Routine items can be delegated back to her.</p><h3>Waiting for You</h3>${V.requests.filter(x=>x.status==="Pending").map(r=>`<div class=log><b>#${r.id} · ${r.type} · ${r.title}</b><br>${r.detail}${r.cost?`<br><b>Financial exposure:</b> ${money(r.cost)}`:""}<div class=row><button onclick="openPMRequestV171(${r.id})">Review</button><button onclick="quickDelegateV161(${r.id})">Delegate</button></div></div>`).join("")||"<p class=good>Nothing waiting.</p>"}<h3>Delegated to Manager</h3>${V.delegated.slice(0,8).map(r=>`<div class=log><b>${r.title}</b><br>${r.detail}<br><small>Status: ${r.status}</small></div>`).join("")||"<p>None.</p>"}<h3>Recent Decisions</h3>${V.completed.slice(0,8).map(r=>`<div class=log><b>${r.title}</b><br>${r.decision}</div>`).join("")||"<p>None.</p>"}<button onclick=closeModal()>Close</button>`
 }
 function openPMRequestV161(id){
  let r=G.v161.requests.find(x=>x.id===id);if(!r)return;
  let context="";
  if(r.type==="Maintenance"){let m=r.title.match(/WO-\d+/),wo=m&&G.v16.workOrders.find(w=>w.id===m[0]);if(wo)context=`<button onclick="openDetailedWOV16('${wo.id}')">Open Work Order & Quotes</button>`}
  if(r.type==="Collections"){let i=P().stores.findIndex(t=>t&&r.title.startsWith(t.name));if(i>=0)context=`<button onclick="openTenantCollectionsV16(${i})">Open Tenant Account</button>`}
- modalbox.innerHTML=`<h2>👩‍💼 Manager Request #${r.id}</h2><div class=log><b>${r.type} · ${r.title}</b><br>${r.detail}${r.cost?`<br><b>Amount/exposure:</b> ${money(r.cost)}`:""}</div><h3>Owner Decision</h3><div class=row>${context}<button onclick="quickDelegateV161(${id})">Delegate to Property Manager</button><button onclick="pmDecisionV161(${id},'Approved')">Approve</button><button onclick="pmDecisionV161(${id},'Denied')">Deny</button><button onclick="pmDecisionV161(${id},'Deferred')">Defer</button></div><h3>Request History</h3>${r.history.map(x=>`<div class=log>${x}</div>`).join("")}<button onclick=openPMDeskV161()>Back</button>`
+ modalbox.innerHTML=`<h2>👩‍💼 Manager Request #${r.id}</h2><div class=log><b>${r.type} · ${r.title}</b><br>${r.detail}${r.cost?`<br><b>Amount/exposure:</b> ${money(r.cost)}`:""}</div><h3>Owner Decision</h3><div class=row>${context}<button onclick="quickDelegateV161(${id})">Delegate to Property Manager</button><button onclick="pmDecisionV161(${id},'Approved')">Approve</button><button onclick="pmDecisionV161(${id},'Denied')">Deny</button><button onclick="pmDecisionV161(${id},'Deferred')">Defer</button></div><h3>Request History</h3>${r.history.map(x=>`<div class=log>${x}</div>`).join("")}<button onclick=openPMDeskV171()>Back</button>`
 }
 function quickDelegateV161(id){v17Log('Item delegated to property manager.');
  let r=G.v161.requests.find(x=>x.id===id);if(!r)return;r.status="Delegated";r.decision="Delegated to Property Manager";r.history.push(`${stamp()}: Owner delegated this item to the property manager.`);G.v161.delegated.unshift(r);addHistoryV14("Delegated to property manager",r.title,"Management");openPMDeskV161();render()
@@ -945,7 +945,7 @@ function v17Init(){
 }
 function v17Log(msg){v17Init();G.v17.activity.unshift(`${stamp()}: ${msg}`);G.v17.activity=G.v17.activity.slice(0,30)}
 function v17StatusBar(){
- v17Init();let a=actionItemsV153(),urgent=a.filter(x=>x.pri>=80).length,wo=(G.v16.workOrders||[]).filter(x=>x.status!=="Closed").length,
+ v171Init();let a=actionItemsV153(),urgent=a.filter(x=>x.pri>=80).length,wo=meaningfulOpenWOsV171().total,
  late=rentActionItemsV16(),ar=late.reduce((n,x)=>n+x.r.balance,0),pm=(G.v161.requests||[]).filter(x=>x.status==="Pending").length;
  let occ=P().stores.filter(Boolean).length+"/"+P().stores.length;
  return`<div class=v17top>
@@ -986,10 +986,121 @@ function toggleV17Drawer(){G.v17.drawerCollapsed=!G.v17.drawerCollapsed;render()
 function v17Ticker(){v17Init();return`<div class=v17ticker>📡 ${G.v17.activity[0]||"Lakeview is operating normally."}</div>`}
 function v17PMBubble(){
  v17Init();pmGenerateRequestsV161();let n=G.v161.requests.filter(x=>x.status==="Pending").length;
- return n?`<div class=v17pm onclick=openPMDeskV161() style="cursor:pointer">👩‍💼 <b>${G.v161.pm.name}</b><br><small>${n} item${n===1?"":"s"} need your approval.</small></div>`:""
+ return n?`<div class=v17pm onclick=openPMDeskV171() style="cursor:pointer">👩‍💼 <b>${G.v161.pm.name}</b><br><small>${n} item${n===1?"":"s"} need your approval.</small></div>`:""
 }
 function v17CommandCenter(){
- v17Init();return`${v17StatusBar()}<div class=v17layout>${v17World()}${v17Drawer()}</div>${v17Ticker()}${v17PMBubble()}`
+ v171Init();return`${v17StatusBar()}<div class=v17layout>${v17World()}${v17Drawer()}</div>${v17Ticker()}${v17PMBubble()}`
+}
+
+// ===== V17.1 CLEANUP: REAL COUNTS + CLEAR PM APPROVALS =====
+function v171Init(){
+ v17Init();G.v171=G.v171||{};let V=G.v171;
+ if(!V.cleanedWorkOrders){
+   // V16 imported thousands of repetitive legacy records from old saves. Keep real/user-created records,
+   // collapse imported duplicates, and remove empty/noise records.
+   let seen=new Set(),clean=[];
+   (G.v16.workOrders||[]).forEach(w=>{
+     if(!w||!w.title)return;
+     let imported=(w.history||[]).some(h=>/Work order created/.test(h)) && /^WO-/.test(w.id||"");
+     let key=(String(w.title).toLowerCase().replace(/\W+/g," ").trim()+"|"+String(w.trade||"").toLowerCase()+"|"+String(w.asset||"").toLowerCase());
+     let noise=/legacy work order|open work order/i.test(w.title)&&!w.detail&&!w.asset;
+     if(noise)return;
+     if(imported&&seen.has(key))return;
+     seen.add(key);clean.push(w);
+   });
+   // Safety cap for pathological migrated saves; retain newest meaningful records.
+   G.v16.workOrders=clean.slice(0,250);
+   V.cleanedWorkOrders=true;
+   V.oldWOCount=(G.v16.workOrders||[]).length;
+ }
+ // Remove stale duplicate PM requests that were generated from vague mail notices.
+ let seenPM=new Set();
+ G.v161.requests=(G.v161.requests||[]).filter(r=>{
+   if(!r)return false;
+   let k=`${r.status}|${r.type}|${r.title}`;
+   if(seenPM.has(k))return false;seenPM.add(k);return true;
+ });
+}
+function meaningfulOpenWOsV171(){
+ v171Init();let detailed=(G.v16.workOrders||[]).filter(w=>w.status!=="Closed");
+ // legacy WOs only count if not already represented by a detailed WO
+ let legacy=allOpenWorkOrders().filter(l=>!detailed.some(w=>{
+   let a=(w.title||"").toLowerCase(),b=(l.title||l.summary||"").toLowerCase();
+   return a&&b&&(a.includes(b)||b.includes(a));
+ }));
+ return {detailed,legacy,total:detailed.length+legacy.length}
+}
+function pmRecommendationV171(r){
+ if(r.type==="Maintenance")return r.cost>G.v161.pm.approvalLimit?"Recommendation: review the quote and approve a vendor or delegate authority for this repair.":"Recommendation: delegate routine follow-up to the property manager.";
+ if(r.type==="Collections")return "Recommendation: speak with the tenant first, then choose a payment plan or formal collection step based on the account.";
+ if(r.type==="Inspection")return "Recommendation: create a corrective work order or delegate verification of the finding.";
+ if(r.type==="Administrative")return "Recommendation: review the actual correspondence before approving any response or expense.";
+ if(r.type==="Weather")return "Recommendation: authorize service if site conditions require it.";
+ if(r.type==="Tenant")return "Recommendation: talk with the tenant before making a lease or relief decision.";
+ return "Recommendation: review the details and choose whether to approve, delegate, or defer."
+}
+function pmAskV171(r){
+ if(r.type==="Maintenance")return r.title.includes("grease")?"Decision needed: Should we obtain grease-service quotes / establish service, or should I handle it under delegated authority?":"Decision needed: May I proceed with this repair/vendor decision?";
+ if(r.type==="Collections")return "Decision needed: How do you want me to handle this delinquent account?";
+ if(r.type==="Inspection")return "Decision needed: Should I create/coordinate corrective work, or just monitor it?";
+ if(r.type==="Administrative")return "Decision needed: Please review this correspondence. Do you want me to handle the follow-up, or do you want to retain it?";
+ if(r.type==="Weather")return "Decision needed: Should I authorize the weather/snow response?";
+ if(r.type==="Tenant")return "Decision needed: Should I meet with the tenant, or would you like to handle the conversation?";
+ return "Decision needed: approve, delegate, deny, or defer."
+}
+function pmContextButtonV171(r){
+ if(r.type==="Maintenance"){
+   let m=r.title.match(/WO-\d+/),wo=m&&G.v16.workOrders.find(w=>w.id===m[0]);
+   if(wo)return`<button onclick="openDetailedWOV16('${wo.id}')">Open Work Order / Quotes</button>`;
+   let gi=P().stores.findIndex(t=>t&&r.title.startsWith(t.name)&&/grease/i.test(r.title));
+   if(gi>=0)return`<button onclick="greaseServiceV162(${gi})">Open Grease Service</button>`;
+ }
+ if(r.type==="Collections"){let i=P().stores.findIndex(t=>t&&r.title.startsWith(t.name));if(i>=0)return`<button onclick="openTenantCollectionsV16(${i})">Open Rent Account</button>`}
+ if(r.type==="Inspection")return`<button onclick="openInspectionCenterV14()">Open Inspection Finding</button>`;
+ if(r.type==="Administrative")return`<button onclick="openMailV15()">Open Correspondence</button>`;
+ if(r.type==="Weather")return`<button onclick="openWeatherV14()">Open Weather Operations</button>`;
+ if(r.type==="Tenant"){let i=P().stores.findIndex(t=>t&&r.title.startsWith(t.name));if(i>=0)return`<button onclick="tenantRelationshipV15(${i})">Open Tenant</button>`}
+ return""
+}
+function openPMRequestV171(id){
+ v171Init();let r=G.v161.requests.find(x=>x.id===id);if(!r)return;
+ modal.style.display="flex";modalbox.style.width="min(900px,96vw)";
+ modalbox.innerHTML=`<h2>👩‍💼 Property Manager Needs Your Decision</h2>
+ <div class=log><b>${r.title}</b><br>${r.detail}${r.cost?`<br><b>Amount / exposure:</b> ${money(r.cost)}`:""}</div>
+ <div class=log><b>❓ ${pmAskV171(r)}</b><br><small>${pmRecommendationV171(r)}</small></div>
+ <h3>Review the Source</h3><div class=row>${pmContextButtonV171(r)||"<span>No linked source document.</span>"}</div>
+ <h3>Your Decision</h3><div class=row>
+ <button onclick="pmDecisionV171(${id},'Approved')">✅ Approve / Proceed</button>
+ <button onclick="quickDelegateV171(${id})">👩‍💼 Delegate to Manager</button>
+ <button onclick="pmDecisionV171(${id},'Denied')">❌ Do Not Proceed</button>
+ <button onclick="pmDecisionV171(${id},'Deferred')">⏸ Decide Later</button></div>
+ <h3>History</h3>${r.history.map(x=>`<div class=log>${x}</div>`).join("")}
+ <button onclick=openPMDeskV171()>Back to Manager Desk</button>`
+}
+function openPMDeskV171(){
+ v171Init();pmGenerateRequestsV161();let V=G.v161,p=V.requests.filter(x=>x.status==="Pending");
+ modal.style.display="flex";modalbox.style.width="min(1000px,96vw)";
+ modalbox.innerHTML=`<h2>👩‍💼 ${V.pm.name} — Decisions Waiting for You</h2>
+ <p>Only items needing owner direction are shown here. Each item tells you exactly what decision is needed.</p>
+ ${p.map(r=>`<div class=log><b>${r.type} · ${r.title}</b><br>${r.detail}<br><b>❓ ${pmAskV171(r)}</b><br><small>${pmRecommendationV171(r)}</small><div class=row><button onclick="openPMRequestV171(${r.id})">Review & Decide</button><button onclick="quickDelegateV171(${r.id})">Delegate</button></div></div>`).join("")||"<p class=good>✓ Nothing is waiting for your approval.</p>"}
+ <h3>Recently Delegated / Decided</h3>${[...V.delegated,...V.completed].slice(0,8).map(r=>`<div class=log><b>${r.title}</b><br>${r.decision||r.status}</div>`).join("")||"<p>None yet.</p>"}
+ <button onclick=closeModal()>Close</button>`
+}
+function pmDecisionV171(id,decision){
+ let r=G.v161.requests.find(x=>x.id===id);if(!r)return;
+ r.status=decision==="Deferred"?"Deferred":"Completed";r.decision=decision;r.history.push(`${stamp()}: Owner decision — ${decision}.`);
+ if(decision!=="Deferred")G.v161.completed.unshift(r);
+ if(decision==="Approved"){
+   // Approval means permission to proceed, but never invents an underlying transaction.
+   if(r.type==="Weather"&&r.title.includes("Snow")){try{plowSnow()}catch(e){}}
+   if(r.type==="Administrative")r.history.push(`${stamp()}: Owner approved property manager follow-up on the correspondence.`);
+ }
+ addHistoryV14("Owner decision",`${r.title}: ${decision}.`,"Management");v17Log(`${r.title}: ${decision}.`);openPMDeskV171();render()
+}
+function quickDelegateV171(id){
+ let r=G.v161.requests.find(x=>x.id===id);if(!r)return;r.status="Delegated";r.decision="Delegated to Property Manager";
+ r.history.push(`${stamp()}: Owner delegated follow-up to property manager.`);G.v161.delegated.unshift(r);
+ addHistoryV14("Delegated to property manager",r.title,"Management");v17Log(`Delegated: ${r.title}.`);openPMDeskV171();render()
 }
 function businessHours(t){let type=(t?.type||"").toLowerCase(),weekend=["Saturday","Sunday"].includes(G.weekday);if(type.includes("pizza")||type.includes("restaurant"))return weekend?[11,23]:[11,22];if(type.includes("grocery")||type.includes("pharm"))return[8,21];if(type.includes("insurance"))return weekend?[0,0]:[9,17];if(type.includes("hair"))return[9,19];if(type.includes("laund"))return[7,22];return weekend?[10,18]:[9,19]}
 function tenantIsOpen(t){let h=G.managementMode?.active?G.managementMode.hour:(simHour||12),b=businessHours(t);return h>=b[0]&&h<b[1]}
@@ -1380,10 +1491,10 @@ function parkingMeeting(i){let t=P().stores[i],p=G.parkingPolicy;modalbox.innerH
 function parkingAction(i,a){let t=P().stores[i],cost=0,msg="";if(a==="reserved"){cost=1200;G.parkingPolicy.reserved=true;msg="Reserved customer spaces were marked near busy storefronts.";P().parking+=2}else if(a==="rear"){cost=500;G.parkingPolicy.employeeRear=true;msg="Tenants were asked to move employee vehicles behind the center.";P().parking+=3}else if(a==="signs"){cost=900;G.parkingPolicy.signage=true;msg="Parking and directional signs were installed.";P().parking+=2}else if(a==="enforce"){cost=1800;G.parkingPolicy.enforcement=true;msg="A parking enforcement service began patrols.";P().parking+=4}else if(a==="repave"){cost=8500;msg="The lot was re-striped and problem areas repaired.";P().parking=Math.min(100,P().parking+14);P().condition+=2}else{t.rel-=4;msg="You decided not to change the parking setup.";P().reputation-=1}if(G.cash<cost)return alert("Need "+money(cost));G.cash-=cost;if(cost)addLedger(msg,-cost);rememberOwner(t,msg);t.pendingTopic=null;if(a!=="ignore")t.rel=Math.min(100,t.rel+5);P().history.push(`${stamp()} — ${msg}`);closeModal();render()}
 function annualReview(){ageAssets();ageDetailedAssets();ageAppearance();ownerLifeAnnual();staffAnnualRealism();if(Math.random()<.65)townEvolution();let pp=P(),occ=Math.round(pp.stores.filter(Boolean).length/pp.stores.length*100),arr=pp.stores.filter(Boolean).slice().sort((a,b)=>b.sales-a.sales),best=arr[0];G.lastAnnual=`<b>${G.year-1} Results</b><br>Occupancy ${occ}% · Value ${money(propValue(pp))}<br>Debt ${money(G.debt)}<br>Best tenant: ${best?best.name:"None"}<br>Open work orders: ${pp.issues.length}`;G.inbox.push({from:"Annual Review",text:`Your ${G.year-1} year-end report is ready.`})}
 function hallOfFame(){let all=[];G.properties.forEach(pp=>pp.stores.filter(Boolean).forEach(t=>all.push(t)));all.sort((a,b)=>a.since-b.since);let longest=all[0];modal.style.display="flex";modalbox.innerHTML=`<h2>🎖️ Hall of Fame</h2><p>Career: ${G.year-1985} years<br>Properties: ${G.properties.length}<br>Portfolio value: ${money(G.properties.reduce((a,p)=>a+propValue(p),0))}<br>Career rent: ${money(G.career.rent)}<br>Debt: ${money(G.debt)}<br>Longest current tenant: ${longest?longest.name+" since "+longest.since:"None"}<br>Employees retired: ${G.career.employeesRetired}<br>Disasters survived: ${G.career.disasters}</p><h3>Memories</h3>${G.memories.slice(-12).map(x=>`<div class=log><b>${x.title}</b> — ${x.date}</div>`).join("")}<button onclick=closeModal()>Back</button>`}
-function autoSave(){try{localStorage.setItem("stripMallTycoonV170",JSON.stringify(G))}catch(e){}}
+function autoSave(){try{localStorage.setItem("stripMallTycoonV171",JSON.stringify(G))}catch(e){}}
 
-function save(){localStorage.setItem("stripMallTycoonV170",JSON.stringify(G));localStorage.setItem("stripMallTycoonV3",JSON.stringify(G));localStorage.setItem("stripMallTycoonV2",JSON.stringify(G));alert("Saved.")}
-function load(){let s=localStorage.getItem("stripMallTycoonV170")||localStorage.getItem("stripMallTycoonV162")||localStorage.getItem("stripMallTycoonV161")||localStorage.getItem("stripMallTycoonV160")||localStorage.getItem("stripMallTycoonV156")||localStorage.getItem("stripMallTycoonV155")||localStorage.getItem("stripMallTycoonV154")||localStorage.getItem("stripMallTycoonV153")||localStorage.getItem("stripMallTycoonV152")||localStorage.getItem("stripMallTycoonV151")||localStorage.getItem("stripMallTycoonV150")||localStorage.getItem("stripMallTycoonV140")||localStorage.getItem("stripMallTycoonV130")||localStorage.getItem("stripMallTycoonV120")||localStorage.getItem("stripMallTycoonV110")||localStorage.getItem("stripMallTycoonV100")||localStorage.getItem("stripMallTycoonV90")||localStorage.getItem("stripMallTycoonV88")||localStorage.getItem("stripMallTycoonV873")||localStorage.getItem("stripMallTycoonV872")||localStorage.getItem("stripMallTycoonV871")||localStorage.getItem("stripMallTycoonV87")||localStorage.getItem("stripMallTycoonV86")||localStorage.getItem("stripMallTycoonV85")||localStorage.getItem("stripMallTycoonV84")||localStorage.getItem("stripMallTycoonV83")||localStorage.getItem("stripMallTycoonV82")||localStorage.getItem("stripMallTycoonV81")||localStorage.getItem("stripMallTycoonV80")||localStorage.getItem("stripMallTycoonV73")||localStorage.getItem("stripMallTycoonV72")||localStorage.getItem("stripMallTycoonV71")||localStorage.getItem("stripMallTycoonV70")||localStorage.getItem("stripMallTycoonV62")||localStorage.getItem("stripMallTycoonV61")||localStorage.getItem("stripMallTycoonV60")||localStorage.getItem("stripMallTycoonV50")||localStorage.getItem("stripMallTycoonV41")||localStorage.getItem("stripMallTycoonV40")||localStorage.getItem("stripMallTycoonV321")||localStorage.getItem("stripMallTycoonV32")||localStorage.getItem("stripMallTycoonV31")||localStorage.getItem("stripMallTycoonV3")||localStorage.getItem("stripMallTycoonV2")||localStorage.getItem("stripMallTycoonV1");if(!s)return alert("No save found.");G=JSON.parse(s);migrate();render()}
+function save(){localStorage.setItem("stripMallTycoonV171",JSON.stringify(G));localStorage.setItem("stripMallTycoonV3",JSON.stringify(G));localStorage.setItem("stripMallTycoonV2",JSON.stringify(G));alert("Saved.")}
+function load(){let s=localStorage.getItem("stripMallTycoonV171")||localStorage.getItem("stripMallTycoonV170")||localStorage.getItem("stripMallTycoonV162")||localStorage.getItem("stripMallTycoonV161")||localStorage.getItem("stripMallTycoonV160")||localStorage.getItem("stripMallTycoonV156")||localStorage.getItem("stripMallTycoonV155")||localStorage.getItem("stripMallTycoonV154")||localStorage.getItem("stripMallTycoonV153")||localStorage.getItem("stripMallTycoonV152")||localStorage.getItem("stripMallTycoonV151")||localStorage.getItem("stripMallTycoonV150")||localStorage.getItem("stripMallTycoonV140")||localStorage.getItem("stripMallTycoonV130")||localStorage.getItem("stripMallTycoonV120")||localStorage.getItem("stripMallTycoonV110")||localStorage.getItem("stripMallTycoonV100")||localStorage.getItem("stripMallTycoonV90")||localStorage.getItem("stripMallTycoonV88")||localStorage.getItem("stripMallTycoonV873")||localStorage.getItem("stripMallTycoonV872")||localStorage.getItem("stripMallTycoonV871")||localStorage.getItem("stripMallTycoonV87")||localStorage.getItem("stripMallTycoonV86")||localStorage.getItem("stripMallTycoonV85")||localStorage.getItem("stripMallTycoonV84")||localStorage.getItem("stripMallTycoonV83")||localStorage.getItem("stripMallTycoonV82")||localStorage.getItem("stripMallTycoonV81")||localStorage.getItem("stripMallTycoonV80")||localStorage.getItem("stripMallTycoonV73")||localStorage.getItem("stripMallTycoonV72")||localStorage.getItem("stripMallTycoonV71")||localStorage.getItem("stripMallTycoonV70")||localStorage.getItem("stripMallTycoonV62")||localStorage.getItem("stripMallTycoonV61")||localStorage.getItem("stripMallTycoonV60")||localStorage.getItem("stripMallTycoonV50")||localStorage.getItem("stripMallTycoonV41")||localStorage.getItem("stripMallTycoonV40")||localStorage.getItem("stripMallTycoonV321")||localStorage.getItem("stripMallTycoonV32")||localStorage.getItem("stripMallTycoonV31")||localStorage.getItem("stripMallTycoonV3")||localStorage.getItem("stripMallTycoonV2")||localStorage.getItem("stripMallTycoonV1");if(!s)return alert("No save found.");G=JSON.parse(s);migrate();render()}
 function newGame(){if(!G||confirm("Start a new 1985 career?")){G=base();render();setTimeout(openingScenario,80)}}
 function closeModal(){modal.style.display="none";modalbox.style.width="min(760px,100%)"}newGame();
 </script></body></html>
