@@ -973,7 +973,7 @@ function greaseQuotesV162(i,emergency){
  modalbox.innerHTML=`<h2>🛢 ${emergency?"Emergency ":""}Grease Pump-Out Quotes — ${t.name}</h2>${vendors.map((q,n)=>`<div class=log><b>${q.vendor}</b> — ${money(q.amount)} · ${q.days===0?"same-day emergency":q.days+" day scheduling"} · quality ${q.quality}/100<br><button onclick="awardGreaseJobV162(${i},'${q.vendor.replace(/'/g,"\\'")}',${q.amount},${q.days})">Award Job</button></div>`).join("")}<button onclick="greaseServiceV162(${i})">Back</button>`
 }
 function awardGreaseJobV162(i,vendor,amount,days){v17Log(`Grease service awarded to ${vendor}.`);
- let t=P().stores[i],job={tenant:i,vendor,amount,status:days===0?"In Progress":"Scheduled",days,created:stamp()};
+ let t=P().stores[i],active=G.v162.greaseJobs.find(j=>j.tenant===i&&!["Completed","Cancelled"].includes(j.status));if(active){alert("A pump-out is already scheduled. Open its work order to track progress.");return openDetailedWOV181(active.workOrderId||active.id)}let job={tenant:i,vendor,amount,status:"Scheduled",days,created:stamp()};
  G.v162.greaseJobs.unshift(job);
  let wo=createDetailedWOV16(`Grease interceptor pump-out — ${t.name}`,`Pump and service restaurant grease interceptor behind Suite ${101+i}.`,amount,"Grease / Environmental",`Suite ${101+i} grease interceptor`);
  wo.vendor=vendor;wo.estimate=amount;wo.status="Scheduled";wo.scheduled=days===0?"Emergency crew dispatched":`Scheduled within ${days} day(s)`;wo.progress=0;wo.execution={arrival:{months:0,hours:days===0?1:Math.max(2,days*2)},lastAdvance:null,crewOnSite:false,hoursWorked:0,targetHours:days===0?3:5};job.workOrderId=wo.id;job.id=wo.id;wo.history.push(`${stamp()}: ${vendor} awarded grease service for ${money(amount)}.`);
@@ -994,7 +994,7 @@ function greaseMonthTickV162(){
  v162Init();Object.entries(G.v162.greaseContracts).forEach(([k,c])=>{
    let i=+k;if(!P().stores[i])return;c.months=(c.months||0)+1;
    let interval=c.frequency==="Monthly"?1:c.frequency==="Every 2 months"?2:3;
-   if(c.months>=interval){c.months=0;c.lastService=stamp();if(G.cash>=c.price){G.cash-=c.price;addLedger(`Grease service — ${P().stores[i].name}`,-c.price);let w=G.wasteByTenant?.[i];if(w){if("grease" in w)w.grease=10;if("greaseLevel" in w)w.greaseLevel=10;}G.v162.greaseJobs.unshift({tenant:i,vendor:c.vendor,amount:c.price,status:"Completed",created:stamp()});addHistoryV14("Scheduled grease service",`${c.vendor} serviced ${P().stores[i].name} for ${money(c.price)}.`,"Maintenance")}else G.phone.push({from:c.vendor,text:`Scheduled grease service for ${P().stores[i].name} could not be processed because payment is unavailable.`,topic:"maintenance"})}
+   if(c.months>=interval){c.months=0;c.lastService=stamp();if(G.cash>=c.price){G.cash-=c.price;addLedger(`Grease service — ${P().stores[i].name}`,-c.price);let job={tenant:i,vendor:c.vendor,amount:c.price,status:"Completed",created:stamp()};G.v162.greaseJobs.unshift(job);v201GreaseReset(i,c.vendor,job);addHistoryV14("Scheduled grease service",`${c.vendor} serviced ${P().stores[i].name} for ${money(c.price)}.`,"Maintenance")}else G.phone.push({from:c.vendor,text:`Scheduled grease service for ${P().stores[i].name} could not be processed because payment is unavailable.`,topic:"maintenance"})}
  });
 }
 function greaseActionItemsV162(){
@@ -1671,7 +1671,7 @@ function v192ContractHTML(){
  return`<div class=card><h2>📋 Service Contracts</h2><p>Manage recurring services and track actual service visits.</p>
  <h3>❄️ Snow Removal</h3><div class=log><b>${active?v19Esc(sc.vendor):"No active snow contractor"}</b><br>${active?`Plan: ${v19Esc(sc.plan)} · ${money(sc.perPush||0)} per push · missed calls ${sc.misses||0}`:"Get bids and select a seasonal contractor."}<br><button onclick=openSnowContract()>${active?"Review / Renew Snow Contract":"Get Snow Removal Bids"}</button> <button onclick=prepareSnow()>Prepare for Snow</button></div>
  <h3>🌱 Mowing & Landscaping</h3><div class=log><b>${g?v19Esc(g.vendor):"No grounds maintenance contract"}</b><br>${g?`${v19Esc(g.frequency)} · ${money(g.price)} per visit · ${g.visits||0} completed visits · ${g.monthsSince||0} month(s) since service`:"Choose a contractor and recurring mowing frequency."}<br><button onclick=v192GroundsQuotes()>${g?"Compare / Renew Grounds Bids":"Get Mowing & Landscaping Bids"}</button>${g?` <button onclick=v192CancelGrounds()>Cancel Contract</button>`:""}</div>
- <h3>🛢 Restaurant Grease Interceptors</h3>${P().stores.map((t,i)=>restaurantSuiteV162(i)?`<div class=log><b>${v19Esc(t.name)}</b> · ${greaseLevelV162(i)}% full<br>${G.v162.greaseContracts[i]?`${v19Esc(G.v162.greaseContracts[i].vendor)} · ${G.v162.greaseContracts[i].frequency} · ${money(G.v162.greaseContracts[i].price)}/visit`:"No recurring pump-out contract"}<br><button onclick="greaseServiceV162(${i})">Quotes / Schedule Pump-out</button>${G.v162.greaseJobs.filter(j=>j.tenant===i).slice(0,3).map(j=>`<br><small>${v19Esc(j.vendor)} · ${j.status}${j.status==="Completed"?" ✓":""}</small>`).join("")}</div>`:"").join("")}
+ <h3>🛢 Restaurant Grease Interceptors</h3>${P().stores.map((t,i)=>restaurantSuiteV162(i)?`<div class=log><b>${v19Esc(t.name)}</b> · ${greaseLevelV162(i)}% full${G.v162.greaseLastPump?.[i]?` · last pumped ${v19Esc(G.v162.greaseLastPump[i].at)}`:""}<br>${G.v162.greaseContracts[i]?`${v19Esc(G.v162.greaseContracts[i].vendor)} · ${G.v162.greaseContracts[i].frequency} · ${money(G.v162.greaseContracts[i].price)}/visit`:"No recurring pump-out contract"}<br><button onclick="greaseServiceV162(${i})">Quotes / Schedule Pump-out</button>${G.v162.greaseJobs.filter(j=>j.tenant===i).slice(0,3).map(j=>`<br><small>${v19Esc(j.vendor)} · ${j.status}${j.status==="Completed"?" ✓":""}</small>`).join("")}</div>`:"").join("")}
  <h3>Service History</h3>${(G.v192?.serviceHistory||[]).slice(0,12).map(h=>`<div class=log>${v19Esc(h)}</div>`).join("")||"<p>No recent visits.</p>"}</div>`
 }
 function v192GroundsQuotes(){
@@ -1696,18 +1696,36 @@ function v192MonthTick(){
  G.appearance.cleanliness=Math.min(100,G.appearance.cleanliness+Math.min(8,visits*2));
  (G.v192.serviceHistory=G.v192.serviceHistory||[]).unshift(`${stamp()}: ${g.vendor} completed ${visits} grounds visits; ${money(cost)} paid.`);
 }
+function v201GreaseReset(i,vendor,job){
+ let w=G.wasteByTenant?.[i];if(!w)return false;
+ w.grease=10;w.greaseLevel=10;
+ if(job){job.applied=true;job.status="Completed";job.completed=job.completed||stamp()}
+ G.v162.greaseLastPump=G.v162.greaseLastPump||{};
+ G.v162.greaseLastPump[i]={at:stamp(),vendor:vendor||"Service contractor",jobId:job?.id||job?.workOrderId||null};
+ return true;
+}
 function v192GreaseTick(){
  v162Init();G.v162.greaseJobs.forEach(j=>{
-  if(j.status==="Completed"||j.status==="Cancelled")return;
+  if(j.status==="Cancelled")return;
   let wo=G.v16.workOrders.find(w=>w.greaseJobId===j.id||w.id===j.workOrderId);
-  if(wo){
-   if(wo.status==="Awaiting Invoice"||wo.status==="Closed"){
-    let w=G.wasteByTenant?.[j.tenant];
-    if(w){w.grease=10;w.greaseLevel=10}
-    j.status="Completed";j.applied=true;j.completed=stamp();
+  let completed=j.status==="Completed"||wo&&["Awaiting Invoice","Closed"].includes(wo.status);
+  if(completed&&!j.applied){
+   if(v201GreaseReset(j.tenant,j.vendor,j)){
     addHistoryV14("Grease pump-out completed",`${j.vendor} pumped ${P().stores[j.tenant]?.name||"restaurant"} interceptor.`,"Maintenance");
     (G.v192.serviceHistory=G.v192.serviceHistory||[]).unshift(`${stamp()}: ${j.vendor} pumped out ${P().stores[j.tenant]?.name||"restaurant"} interceptor.`);
-   }else j.status=wo.status;
+   }
+  }else if(wo&&!completed)j.status=wo.status;
+ });
+}
+function v201ReconcileGrease(){
+ v162Init();G.v162.greaseLastPump=G.v162.greaseLastPump||{};
+ P().stores.forEach((t,i)=>{
+  if(!restaurantSuiteV162(i))return;
+  let jobs=G.v162.greaseJobs.filter(j=>j.tenant===i);
+  let latest=jobs[0];
+  if(latest&&latest.status==="Completed"&&!G.v162.greaseLastPump[i]){
+   // One-time repair for saves where a finished pump-out never updated the gauge.
+   v201GreaseReset(i,latest.vendor,latest);
   }
  });
 }
@@ -2124,10 +2142,10 @@ function parkingMeeting(i){let t=P().stores[i],p=G.parkingPolicy;modalbox.innerH
 function parkingAction(i,a){let t=P().stores[i],cost=0,msg="";if(a==="reserved"){cost=1200;G.parkingPolicy.reserved=true;msg="Reserved customer spaces were marked near busy storefronts.";P().parking+=2}else if(a==="rear"){cost=500;G.parkingPolicy.employeeRear=true;msg="Tenants were asked to move employee vehicles behind the center.";P().parking+=3}else if(a==="signs"){cost=900;G.parkingPolicy.signage=true;msg="Parking and directional signs were installed.";P().parking+=2}else if(a==="enforce"){cost=1800;G.parkingPolicy.enforcement=true;msg="A parking enforcement service began patrols.";P().parking+=4}else if(a==="repave"){cost=8500;msg="The lot was re-striped and problem areas repaired.";P().parking=Math.min(100,P().parking+14);P().condition+=2}else{t.rel-=4;msg="You decided not to change the parking setup.";P().reputation-=1}if(G.cash<cost)return alert("Need "+money(cost));G.cash-=cost;if(cost)addLedger(msg,-cost);rememberOwner(t,msg);t.pendingTopic=null;if(a!=="ignore")t.rel=Math.min(100,t.rel+5);P().history.push(`${stamp()} — ${msg}`);closeModal();render()}
 function annualReview(){ageAssets();ageDetailedAssets();ageAppearance();ownerLifeAnnual();staffAnnualRealism();if(Math.random()<.65)townEvolution();let pp=P(),occ=Math.round(pp.stores.filter(Boolean).length/pp.stores.length*100),arr=pp.stores.filter(Boolean).slice().sort((a,b)=>b.sales-a.sales),best=arr[0];G.lastAnnual=`<b>${G.year-1} Results</b><br>Occupancy ${occ}% · Value ${money(propValue(pp))}<br>Debt ${money(G.debt)}<br>Best tenant: ${best?best.name:"None"}<br>Open work orders: ${pp.issues.length}`;G.inbox.push({from:"Annual Review",text:`Your ${G.year-1} year-end report is ready.`})}
 function hallOfFame(){let all=[];G.properties.forEach(pp=>pp.stores.filter(Boolean).forEach(t=>all.push(t)));all.sort((a,b)=>a.since-b.since);let longest=all[0];modal.style.display="flex";modalbox.innerHTML=`<h2>🎖️ Hall of Fame</h2><p>Career: ${G.year-1985} years<br>Properties: ${G.properties.length}<br>Portfolio value: ${money(G.properties.reduce((a,p)=>a+propValue(p),0))}<br>Career rent: ${money(G.career.rent)}<br>Debt: ${money(G.debt)}<br>Longest current tenant: ${longest?longest.name+" since "+longest.since:"None"}<br>Employees retired: ${G.career.employeesRetired}<br>Disasters survived: ${G.career.disasters}</p><h3>Memories</h3>${G.memories.slice(-12).map(x=>`<div class=log><b>${x.title}</b> — ${x.date}</div>`).join("")}<button onclick=closeModal()>Back</button>`}
-function autoSave(){try{localStorage.setItem("stripMallTycoonV200",JSON.stringify(G))}catch(e){}}
+function autoSave(){try{localStorage.setItem("stripMallTycoonV201",JSON.stringify(G))}catch(e){}}
 
-function save(){localStorage.setItem("stripMallTycoonV200",JSON.stringify(G));localStorage.setItem("stripMallTycoonV3",JSON.stringify(G));localStorage.setItem("stripMallTycoonV2",JSON.stringify(G));alert("Saved.")}
-function load(){let s=localStorage.getItem("stripMallTycoonV200")||localStorage.getItem("stripMallTycoonV192")||localStorage.getItem("stripMallTycoonV191")||localStorage.getItem("stripMallTycoonV190")||localStorage.getItem("stripMallTycoonV183")||localStorage.getItem("stripMallTycoonV182")||localStorage.getItem("stripMallTycoonV181")||localStorage.getItem("stripMallTycoonV180")||localStorage.getItem("stripMallTycoonV173")||localStorage.getItem("stripMallTycoonV172")||localStorage.getItem("stripMallTycoonV171")||localStorage.getItem("stripMallTycoonV170")||localStorage.getItem("stripMallTycoonV162")||localStorage.getItem("stripMallTycoonV161")||localStorage.getItem("stripMallTycoonV160")||localStorage.getItem("stripMallTycoonV156")||localStorage.getItem("stripMallTycoonV155")||localStorage.getItem("stripMallTycoonV154")||localStorage.getItem("stripMallTycoonV153")||localStorage.getItem("stripMallTycoonV152")||localStorage.getItem("stripMallTycoonV151")||localStorage.getItem("stripMallTycoonV150")||localStorage.getItem("stripMallTycoonV140")||localStorage.getItem("stripMallTycoonV130")||localStorage.getItem("stripMallTycoonV120")||localStorage.getItem("stripMallTycoonV110")||localStorage.getItem("stripMallTycoonV100")||localStorage.getItem("stripMallTycoonV90")||localStorage.getItem("stripMallTycoonV88")||localStorage.getItem("stripMallTycoonV873")||localStorage.getItem("stripMallTycoonV872")||localStorage.getItem("stripMallTycoonV871")||localStorage.getItem("stripMallTycoonV87")||localStorage.getItem("stripMallTycoonV86")||localStorage.getItem("stripMallTycoonV85")||localStorage.getItem("stripMallTycoonV84")||localStorage.getItem("stripMallTycoonV83")||localStorage.getItem("stripMallTycoonV82")||localStorage.getItem("stripMallTycoonV81")||localStorage.getItem("stripMallTycoonV80")||localStorage.getItem("stripMallTycoonV73")||localStorage.getItem("stripMallTycoonV72")||localStorage.getItem("stripMallTycoonV71")||localStorage.getItem("stripMallTycoonV70")||localStorage.getItem("stripMallTycoonV62")||localStorage.getItem("stripMallTycoonV61")||localStorage.getItem("stripMallTycoonV60")||localStorage.getItem("stripMallTycoonV50")||localStorage.getItem("stripMallTycoonV41")||localStorage.getItem("stripMallTycoonV40")||localStorage.getItem("stripMallTycoonV321")||localStorage.getItem("stripMallTycoonV32")||localStorage.getItem("stripMallTycoonV31")||localStorage.getItem("stripMallTycoonV3")||localStorage.getItem("stripMallTycoonV2")||localStorage.getItem("stripMallTycoonV1");if(!s)return alert("No save found.");G=JSON.parse(s);migrate();render()}
+function save(){localStorage.setItem("stripMallTycoonV201",JSON.stringify(G));localStorage.setItem("stripMallTycoonV3",JSON.stringify(G));localStorage.setItem("stripMallTycoonV2",JSON.stringify(G));alert("Saved.")}
+function load(){let s=localStorage.getItem("stripMallTycoonV201")||localStorage.getItem("stripMallTycoonV200")||localStorage.getItem("stripMallTycoonV192")||localStorage.getItem("stripMallTycoonV191")||localStorage.getItem("stripMallTycoonV190")||localStorage.getItem("stripMallTycoonV183")||localStorage.getItem("stripMallTycoonV182")||localStorage.getItem("stripMallTycoonV181")||localStorage.getItem("stripMallTycoonV180")||localStorage.getItem("stripMallTycoonV173")||localStorage.getItem("stripMallTycoonV172")||localStorage.getItem("stripMallTycoonV171")||localStorage.getItem("stripMallTycoonV170")||localStorage.getItem("stripMallTycoonV162")||localStorage.getItem("stripMallTycoonV161")||localStorage.getItem("stripMallTycoonV160")||localStorage.getItem("stripMallTycoonV156")||localStorage.getItem("stripMallTycoonV155")||localStorage.getItem("stripMallTycoonV154")||localStorage.getItem("stripMallTycoonV153")||localStorage.getItem("stripMallTycoonV152")||localStorage.getItem("stripMallTycoonV151")||localStorage.getItem("stripMallTycoonV150")||localStorage.getItem("stripMallTycoonV140")||localStorage.getItem("stripMallTycoonV130")||localStorage.getItem("stripMallTycoonV120")||localStorage.getItem("stripMallTycoonV110")||localStorage.getItem("stripMallTycoonV100")||localStorage.getItem("stripMallTycoonV90")||localStorage.getItem("stripMallTycoonV88")||localStorage.getItem("stripMallTycoonV873")||localStorage.getItem("stripMallTycoonV872")||localStorage.getItem("stripMallTycoonV871")||localStorage.getItem("stripMallTycoonV87")||localStorage.getItem("stripMallTycoonV86")||localStorage.getItem("stripMallTycoonV85")||localStorage.getItem("stripMallTycoonV84")||localStorage.getItem("stripMallTycoonV83")||localStorage.getItem("stripMallTycoonV82")||localStorage.getItem("stripMallTycoonV81")||localStorage.getItem("stripMallTycoonV80")||localStorage.getItem("stripMallTycoonV73")||localStorage.getItem("stripMallTycoonV72")||localStorage.getItem("stripMallTycoonV71")||localStorage.getItem("stripMallTycoonV70")||localStorage.getItem("stripMallTycoonV62")||localStorage.getItem("stripMallTycoonV61")||localStorage.getItem("stripMallTycoonV60")||localStorage.getItem("stripMallTycoonV50")||localStorage.getItem("stripMallTycoonV41")||localStorage.getItem("stripMallTycoonV40")||localStorage.getItem("stripMallTycoonV321")||localStorage.getItem("stripMallTycoonV32")||localStorage.getItem("stripMallTycoonV31")||localStorage.getItem("stripMallTycoonV3")||localStorage.getItem("stripMallTycoonV2")||localStorage.getItem("stripMallTycoonV1");if(!s)return alert("No save found.");G=JSON.parse(s);migrate();render()}
 function newGame(){if(!G||confirm("Start a new 1985 career?")){G=base();render();setTimeout(openingScenario,80)}}
 function closeModal(){modal.style.display="none";modalbox.style.width="min(760px,100%)"}newGame();
 </script></body></html>
