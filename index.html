@@ -1687,6 +1687,7 @@ function v23Init(){
  ["Parking lot","Rooftops","Storefronts","Landscaping","Waste enclosure","Service alley"].forEach((name,i)=>{
   V.zones[name]=V.zones[name]||{name,condition:Math.max(35,90-i*4),inspected:0,issueKeys:[]};
  });
+ G.staff=Array.isArray(G.staff)?G.staff:base().staff;
  G.staff.forEach(x=>{V.staff[x.name]=V.staff[x.name]||{skill:50+Math.floor(Math.random()*30),morale:70,training:0,inspectionCount:0}});
 }
 function v23Zone(name){
@@ -1769,7 +1770,7 @@ function v23Phone(i){
 }
 function v23TenantExperience(i){
  v23Init();let t=P().stores[i];if(!t)return "";
- let n=G.v21.tenants[i],issues=Object.values(G.v22.conditions).filter(x=>x.suite===i&&x.state!=="Resolved").length,late=G.v16?.rent?.[i]?.daysLate||0;
+ v22Init();let n=G.v21.tenants[i],issues=Object.values(G.v22?.conditions||{}).filter(x=>x.suite===i&&x.state!=="Resolved").length,late=G.v16?.rent?.[i]?.daysLate||0;
  let upkeep=Math.max(0,Math.round((P().condition||75)-issues*9)),communication=Math.max(0,Math.min(100,(t.rel||60)-G.v21.promises.filter(p=>p.suite===i&&p.status==="Overdue").length*5)),business=Math.round(t.health),lease=Math.max(0,100-Math.min(60,late/2));
  return`<div class=log><b>${v19Esc(t.name)} — Tenant Experience</b><br>Upkeep ${upkeep} · Communication ${communication} · Business ${business} · Lease ${lease}<br><button onclick="v23Phone(${i})">Call Owner</button> <button onclick="v21Conversation(${i})">Communication File</button></div>`;
 }
@@ -2426,7 +2427,7 @@ function parkingMeeting(i){let t=P().stores[i],p=G.parkingPolicy;modalbox.innerH
 function parkingAction(i,a){let t=P().stores[i],cost=0,msg="";if(a==="reserved"){cost=1200;G.parkingPolicy.reserved=true;msg="Reserved customer spaces were marked near busy storefronts.";P().parking+=2}else if(a==="rear"){cost=500;G.parkingPolicy.employeeRear=true;msg="Tenants were asked to move employee vehicles behind the center.";P().parking+=3}else if(a==="signs"){cost=900;G.parkingPolicy.signage=true;msg="Parking and directional signs were installed.";P().parking+=2}else if(a==="enforce"){cost=1800;G.parkingPolicy.enforcement=true;msg="A parking enforcement service began patrols.";P().parking+=4}else if(a==="repave"){cost=8500;msg="The lot was re-striped and problem areas repaired.";P().parking=Math.min(100,P().parking+14);P().condition+=2}else{t.rel-=4;msg="You decided not to change the parking setup.";P().reputation-=1}if(G.cash<cost)return alert("Need "+money(cost));G.cash-=cost;if(cost)addLedger(msg,-cost);rememberOwner(t,msg);t.pendingTopic=null;if(a!=="ignore")t.rel=Math.min(100,t.rel+5);P().history.push(`${stamp()} — ${msg}`);closeModal();render()}
 function annualReview(){ageAssets();ageDetailedAssets();ageAppearance();ownerLifeAnnual();staffAnnualRealism();if(Math.random()<.65)townEvolution();let pp=P(),occ=Math.round(pp.stores.filter(Boolean).length/pp.stores.length*100),arr=pp.stores.filter(Boolean).slice().sort((a,b)=>b.sales-a.sales),best=arr[0];G.lastAnnual=`<b>${G.year-1} Results</b><br>Occupancy ${occ}% · Value ${money(propValue(pp))}<br>Debt ${money(G.debt)}<br>Best tenant: ${best?best.name:"None"}<br>Open work orders: ${pp.issues.length}`;G.inbox.push({from:"Annual Review",text:`Your ${G.year-1} year-end report is ready.`})}
 function hallOfFame(){let all=[];G.properties.forEach(pp=>pp.stores.filter(Boolean).forEach(t=>all.push(t)));all.sort((a,b)=>a.since-b.since);let longest=all[0];modal.style.display="flex";modalbox.innerHTML=`<h2>🎖️ Hall of Fame</h2><p>Career: ${G.year-1985} years<br>Properties: ${G.properties.length}<br>Portfolio value: ${money(G.properties.reduce((a,p)=>a+propValue(p),0))}<br>Career rent: ${money(G.career.rent)}<br>Debt: ${money(G.debt)}<br>Longest current tenant: ${longest?longest.name+" since "+longest.since:"None"}<br>Employees retired: ${G.career.employeesRetired}<br>Disasters survived: ${G.career.disasters}</p><h3>Memories</h3>${G.memories.slice(-12).map(x=>`<div class=log><b>${x.title}</b> — ${x.date}</div>`).join("")}<button onclick=closeModal()>Back</button>`}
-const SAVE_KEY_V202="stripMallTycoonV230";
+const SAVE_KEY_V202="stripMallTycoonV231";
 let saveTimerV202=null,lastSaveErrorV202="",saveSequenceV211=0,dbV211=null,saveBusyV211=false,saveQueuedV211=false,lastSaveAtV212=0,saveDirtyV212=false;
 function saveStatusV202(msg,ok){let e=document.getElementById("saveState");if(e){e.textContent=msg;e.style.color=ok?"#a5d7b0":"#ffba99";e.title=lastSaveErrorV202||msg}}
 function openSaveDBV211(){return new Promise((resolve,reject)=>{
@@ -2472,9 +2473,9 @@ function autoSave(){
 async function save(){if(await autoSave())alert("Saved and verified. ⬇ Backup also downloads a portable JSON copy.");else alert("Browser storage failed: "+lastSaveErrorV202+". Use ⬇ Backup to save a JSON file.")}
 function exportSaveV202(){
  if(!G)return alert("No game to back up.");
- const raw=JSON.stringify({format:"StripMallTycoon",version:212,exported:new Date().toISOString(),game:G});
+ const raw=JSON.stringify({format:"StripMallTycoon",version:231,exported:new Date().toISOString(),game:G});
  const url=URL.createObjectURL(new Blob([raw],{type:"application/json"}));
- const link=document.createElement("a");link.href=url;link.download=`Lakeview_Plaza_${G.year}_${String(G.month).padStart(2,"0")}_V212.json`;
+ const link=document.createElement("a");link.href=url;link.download=`Lakeview_Plaza_${G.year}_${String(G.month).padStart(2,"0")}_V231.json`;
  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
  saveStatusV202("✓ Backup downloaded",true);
 }
@@ -2492,17 +2493,22 @@ function importSaveV202(input){
  };reader.onerror=()=>alert("Could not read the selected backup file.");reader.readAsText(file);
 }
 async function load(){
- let raw=null,source=null;
- try{raw=await readDBV211();if(raw)source="IndexedDB"}catch(err){lastSaveErrorV202=String(err)}
- if(!raw){
-  for(const key of ["stripMallTycoonV211","stripMallTycoonV210","stripMallTycoonV202","stripMallTycoonV201","stripMallTycoonV200","stripMallTycoonV192","stripMallTycoonV191","stripMallTycoonV190","stripMallTycoonV183","stripMallTycoonV182","stripMallTycoonV181","stripMallTycoonV180","stripMallTycoonV173","stripMallTycoonV172","stripMallTycoonV171","stripMallTycoonV170","stripMallTycoonV162","stripMallTycoonV161","stripMallTycoonV160","stripMallTycoonV156","stripMallTycoonV155","stripMallTycoonV154","stripMallTycoonV153","stripMallTycoonV152","stripMallTycoonV151","stripMallTycoonV150","stripMallTycoonV140","stripMallTycoonV130","stripMallTycoonV120","stripMallTycoonV110","stripMallTycoonV100","stripMallTycoonV90","stripMallTycoonV88","stripMallTycoonV873","stripMallTycoonV872","stripMallTycoonV871","stripMallTycoonV87","stripMallTycoonV86","stripMallTycoonV85","stripMallTycoonV84","stripMallTycoonV83","stripMallTycoonV82","stripMallTycoonV81","stripMallTycoonV80","stripMallTycoonV73","stripMallTycoonV72","stripMallTycoonV71","stripMallTycoonV70","stripMallTycoonV62","stripMallTycoonV61","stripMallTycoonV60","stripMallTycoonV50","stripMallTycoonV41","stripMallTycoonV40","stripMallTycoonV321","stripMallTycoonV32","stripMallTycoonV31","stripMallTycoonV3","stripMallTycoonV2","stripMallTycoonV1"]){
-   try{raw=localStorage.getItem(key)}catch(e){lastSaveErrorV202=String(e);break}
-   if(raw){source=key;break}
-  }
+ let candidates=[];
+ try{let raw=await readDBV211();if(raw)candidates.push({raw,source:"IndexedDB"})}catch(err){lastSaveErrorV202=String(err)}
+ const keys=["stripMallTycoonV230","stripMallTycoonV220","stripMallTycoonV213","stripMallTycoonV212","stripMallTycoonV211","stripMallTycoonV210","stripMallTycoonV202","stripMallTycoonV201","stripMallTycoonV200","stripMallTycoonV192","stripMallTycoonV191","stripMallTycoonV190","stripMallTycoonV183","stripMallTycoonV182","stripMallTycoonV181","stripMallTycoonV180","stripMallTycoonV173","stripMallTycoonV172","stripMallTycoonV171","stripMallTycoonV170","stripMallTycoonV162","stripMallTycoonV161","stripMallTycoonV160","stripMallTycoonV156","stripMallTycoonV155","stripMallTycoonV154","stripMallTycoonV153","stripMallTycoonV152","stripMallTycoonV151","stripMallTycoonV150","stripMallTycoonV140","stripMallTycoonV130","stripMallTycoonV120","stripMallTycoonV110","stripMallTycoonV100","stripMallTycoonV90","stripMallTycoonV88","stripMallTycoonV873","stripMallTycoonV872","stripMallTycoonV871","stripMallTycoonV87","stripMallTycoonV86","stripMallTycoonV85","stripMallTycoonV84","stripMallTycoonV83","stripMallTycoonV82","stripMallTycoonV81","stripMallTycoonV80","stripMallTycoonV73","stripMallTycoonV72","stripMallTycoonV71","stripMallTycoonV70","stripMallTycoonV62","stripMallTycoonV61","stripMallTycoonV60","stripMallTycoonV50","stripMallTycoonV41","stripMallTycoonV40","stripMallTycoonV321","stripMallTycoonV32","stripMallTycoonV31","stripMallTycoonV3","stripMallTycoonV2","stripMallTycoonV1"];
+ for(const key of keys){try{let raw=localStorage.getItem(key);if(raw)candidates.push({raw,source:key})}catch(e){lastSaveErrorV202=String(e);break}}
+ let seen=new Set(),errors=[];
+ for(const c of candidates){
+  if(seen.has(c.raw))continue;seen.add(c.raw);
+  try{
+   let data=JSON.parse(c.raw);if(!data||typeof data.year!=="number")throw Error("Invalid save data");
+   G=data;migrate();v19Init();v21Init();v22Init();v23Init();render();
+   if(c.source!=="IndexedDB")await writeSaveV202();
+   saveStatusV202(`✓ Loaded saved property · ${c.source}`,true);return true;
+  }catch(err){errors.push(`${c.source}: ${err.message}`)}
  }
- if(!raw){saveStatusV202("⚠ No save found — Restore backup",false);return false}
- try{let data=JSON.parse(raw);if(!data||typeof data.year!=="number")throw Error("Invalid save data");G=data;migrate();render();if(source!=="IndexedDB")await writeSaveV202();else saveStatusV202("✓ Loaded saved property",true);return true}
- catch(err){lastSaveErrorV202=`Could not load ${source}: ${err.message}`;saveStatusV202("⚠ Save needs attention",false);alert(lastSaveErrorV202);return false}
+ if(errors.length){lastSaveErrorV202=errors.join(" | ");saveStatusV202("⚠ Could not migrate saved property — Restore backup",false);alert("I found saved game data, but it could not be loaded safely. Your save was not deleted. Try Restore with your JSON backup.\n\n"+errors.slice(0,3).join("\n"));return false}
+ saveStatusV202("⚠ No save found — Restore backup",false);return false
 }
 function newGame(){
  if(G&&!confirm("Start a new 1985 career? Your existing save will be replaced. Download a Backup first if you want to keep it."))return;
